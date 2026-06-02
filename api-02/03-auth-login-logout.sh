@@ -130,34 +130,26 @@ export class UserService {
   // =========================================
   // CREATE
   // =========================================
-  async create(
-    data: CreateUserDto,
-  ) {
-    const userExists =
-      await this.prisma.user.findUnique({
-        where: {
-          email: data.email,
-        },
-      });
+  async create(data: CreateUserDto) {
+    // 🚀 Ajustado para .client
+    const userExists = await this.prisma.client.user.findUnique({
+      where: {
+        email: data.email,
+      },
+    });
 
     if (userExists) {
-      throw new ConflictException(
-        'E-mail já cadastrado',
-      );
+      throw new ConflictException('E-mail já cadastrado');
     }
 
-    const hashedPassword =
-      await argon2.hash(
-        data.password,
-      );
+    const hashedPassword = await argon2.hash(data.password);
 
-    return this.prisma.user.create({
+    // 🚀 Ajustado para .client -> Vai criar o Log de Auditoria AUTOMATICAMENTE
+    return this.prisma.client.user.create({
       data: {
         ...data,
-        password:
-          hashedPassword,
+        password: hashedPassword,
       },
-
       select: {
         id: true,
         email: true,
@@ -172,11 +164,11 @@ export class UserService {
   // FIND ALL
   // =========================================
   async findAll() {
-    return this.prisma.user.findMany({
+    // Queries de leitura podem usar o cliente padrão ou o .client (indiferente)
+    return this.prisma.client.user.findMany({
       orderBy: {
         createdAt: 'desc',
       },
-
       select: {
         id: true,
         email: true,
@@ -191,23 +183,19 @@ export class UserService {
   // FIND ONE
   // =========================================
   async findOne(id: string) {
-    const user =
-      await this.prisma.user.findUnique({
-        where: { id },
-
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-        },
-      });
+    const user = await this.prisma.client.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
 
     if (!user) {
-      throw new NotFoundException(
-        'Usuário não encontrado',
-      );
+      throw new NotFoundException('Usuário não encontrado');
     }
 
     return user;
@@ -216,10 +204,9 @@ export class UserService {
   // =========================================
   // FIND BY EMAIL
   // =========================================
-  async findByEmail(
-    email: string,
-  ) {
-    return this.prisma.user.findUnique({
+  async findByEmail(email: string) {
+    // Importante para a validação interna do AuthService
+    return this.prisma.client.user.findUnique({
       where: { email },
     });
   }
@@ -227,54 +214,37 @@ export class UserService {
   // =========================================
   // UPDATE
   // =========================================
-  async update(
-    id: string,
-    data: UpdateUserDto,
-  ) {
-    const user =
-      await this.prisma.user.findUnique({
-        where: { id },
-      });
+  async update(id: string, data: UpdateUserDto) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id },
+    });
 
     if (!user) {
-      throw new NotFoundException(
-        'Usuário não encontrado',
-      );
+      throw new NotFoundException('Usuário não encontrado');
     }
 
     // EMAIL JÁ EXISTE
-    if (
-      data.email &&
-      data.email !== user.email
-    ) {
-      const emailExists =
-        await this.prisma.user.findUnique({
-          where: {
-            email:
-              data.email,
-          },
-        });
+    if (data.email && data.email !== user.email) {
+      const emailExists = await this.prisma.client.user.findUnique({
+        where: {
+          email: data.email,
+        },
+      });
 
       if (emailExists) {
-        throw new ConflictException(
-          'E-mail já está em uso',
-        );
+        throw new ConflictException('E-mail já está em uso');
       }
     }
 
     // HASH PASSWORD
     if (data.password) {
-      data.password =
-        await argon2.hash(
-          data.password,
-        );
+      data.password = await argon2.hash(data.password);
     }
 
-    return this.prisma.user.update({
+    // 🚀 Ajustado para .client -> Vai atualizar e disparar o Log de alteração AUTOMATICAMENTE
+    return this.prisma.client.user.update({
       where: { id },
-
       data,
-
       select: {
         id: true,
         email: true,
@@ -289,24 +259,21 @@ export class UserService {
   // DELETE
   // =========================================
   async remove(id: string) {
-    const user =
-      await this.prisma.user.findUnique({
-        where: { id },
-      });
+    const user = await this.prisma.client.user.findUnique({
+      where: { id },
+    });
 
     if (!user) {
-      throw new NotFoundException(
-        'Usuário não encontrado',
-      );
+      throw new NotFoundException('Usuário não encontrado');
     }
 
-    await this.prisma.user.delete({
+    // 🚀 Ajustado para .client -> Se o seu interceptor ler o delete ou update do softdelete, ele pegará aqui
+    await this.prisma.client.user.delete({
       where: { id },
     });
 
     return {
-      message:
-        'Usuário removido com sucesso',
+      message: 'Usuário removido com sucesso',
     };
   }
 }
@@ -647,28 +614,26 @@ import { UserService } from '../users/user.service';
 import { PrismaService } from '../../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { CreateUserDto } from '../users/dto/create-user.dto'; // Importe seu DTO
-import { Role } from '../../../generated/prisma/client'; // Importe o enum Role do local correto
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { Role } from '../../../generated/prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private users: UserService,
-    private prisma: PrismaService,
+    private prisma: PrismaService, // Injeta o seu serviço
     private jwt: JwtService,
   ) {}
 
-  // 1. Alterado para receber o DTO completo
   async register(dto: CreateUserDto) {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) throw new ConflictException('E-mail já cadastrado');
 
-    // 2. Passamos o DTO inteiro. A role (se existir) vai dentro dele.
-    // O UserService cuidará do Hash da senha.
+    // O UserService cria o usuário (Certifique-se que o UserService também use o this.prisma.client.user.create)
     const user = await this.users.create(dto);
 
-    // 3. Criar sessão inicial
-    const session = await this.prisma.session.create({
+    // 🚀 Mudamos para .client para passar pelo fluxo de log automático
+    const session = await this.prisma.client.session.create({
       data: {
         userId: user.id,
         refreshToken: '',
@@ -679,7 +644,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user, session.id);
     const hashedRt = await argon2.hash(tokens.refreshToken);
 
-    await this.prisma.session.update({
+    await this.prisma.client.session.update({
       where: { id: session.id },
       data: { refreshToken: hashedRt },
     });
@@ -699,27 +664,27 @@ export class AuthService {
     const valid = await argon2.verify(user.password, data.password);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
 
-    const session = await this.prisma.session.create({
+    const session = await this.prisma.client.session.create({
       data: {
         userId: user.id,
         refreshToken: '',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ip: meta.ip || null,
+        userAgent: meta.userAgent || null,
       },
     });
 
     const tokens = await this.generateTokens(user, session.id);
     const hashedRt = await argon2.hash(tokens.refreshToken);
 
-    await this.prisma.session.update({
+    await this.prisma.client.session.update({
       where: { id: session.id },
       data: { refreshToken: hashedRt },
     });
 
-    // --- ALTERAÇÃO AQUI ---
-    // Retornamos os tokens + dados básicos para a UI do frontend
     return {
       ...tokens,
-      name: user.name,   // Certifique-se que o campo no banco é 'name'
+      name: user.name,
       email: user.email,
       role: user.role
     };
@@ -727,12 +692,11 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     try {
-      // Use o ConfigService se disponível para o secret, ou garanta que process.env esteja ok
       const payload = await this.jwt.verifyAsync(refreshToken, {
         secret: process.env.JWT_SECRET,
       });
 
-      const sessions = await this.prisma.session.findMany({
+      const sessions = await this.prisma.client.session.findMany({
         where: { userId: payload.sub, revoked: false },
       });
 
@@ -743,12 +707,12 @@ export class AuthService {
           const user = await this.users.findByEmail(payload.email);
           if (!user) throw new UnauthorizedException();
 
-          await this.prisma.session.update({
+          await this.prisma.client.session.update({
             where: { id: session.id },
             data: { revoked: true },
           });
 
-          const newSession = await this.prisma.session.create({
+          const newSession = await this.prisma.client.session.create({
             data: {
               userId: user.id,
               refreshToken: '',
@@ -759,7 +723,7 @@ export class AuthService {
           const tokens = await this.generateTokens(user, newSession.id);
           const hashedRt = await argon2.hash(tokens.refreshToken);
 
-          await this.prisma.session.update({
+          await this.prisma.client.session.update({
             where: { id: newSession.id },
             data: { refreshToken: hashedRt },
           });
@@ -775,7 +739,7 @@ export class AuthService {
   }
 
   async logout(sessionId: string) {
-    await this.prisma.session.update({
+    await this.prisma.client.session.update({
       where: { id: sessionId },
       data: { revoked: true },
     });
@@ -783,10 +747,11 @@ export class AuthService {
     return { message: 'Logout realizado com sucesso' };
   }
 
-  async logoutAll(userId: number) {
-    await this.prisma.session.updateMany({
+  // ⚠️ CORRIGIDO: Alterado de 'number' para 'string' para bater com o UUID do banco
+  async logoutAll(userId: string) {
+    await this.prisma.client.session.updateMany({
       where: { 
-        userId: String(userId), 
+        userId: userId, 
         revoked: false 
       },
       data: { revoked: true },
@@ -799,7 +764,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role as Role, // Forçamos o tipo para garantir compatibilidade
+      role: user.role as Role,
       sessionId,
     };
 

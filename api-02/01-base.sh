@@ -49,7 +49,15 @@ DB_PASS=postgres
 DB_MAIN_DATABASE=postgres
 NEW_PROJECT_DB=minha_api_02
 
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minha_api_glpi?schema=public"
+POSTGRES_USER=postgres
+POSTGRES_PW=postgres
+POSTGRES_DB=minha_api_02
+
+PGADMIN_MAIL=admin@local.com
+PGADMIN_PW=changeit
+
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minha_api_02?schema=public"
+
 JWT_SECRET="super-secret"
 
 # Configurações do GLPI (O que o erro pediu)
@@ -126,7 +134,7 @@ EOF
 mkdir -p src/database
 cat << 'EOF' > src/database/prisma.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient, Prisma } from "../../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 @Injectable()
@@ -134,13 +142,71 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-
   private readonly logger = new Logger(PrismaService.name);
+  
+  // Propriedade que seus outros Services vão consumir
+  public client: any;
+
   constructor() {
     const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL as string,
     });
+    
+    // Inicializa o PrismaClient base
     super({ adapter });
+
+    // Armazenamos a referência da instância da classe base externa
+    const baseClient = this;
+
+    // Aplicamos a extensão global de auditoria
+    this.client = this.$extends({
+      query: {
+        $allModels: {
+          // Captura qualquer operação de criação
+          async create({ model, args, query }) {
+            const result = await query(args);
+
+            // Evita loop infinito se a query for o próprio AuditLog
+            if (model === 'AuditLog') return result;
+
+            // 🚀 CORRIGIDO: Usamos o cliente base salvo externamente para evitar o 'undefined'
+            (baseClient as any).auditLog.create({
+              data: {
+                action: 'CREATE',
+                module: model.toUpperCase(),
+                entityId: (result as any).id ? String((result as any).id) : null,
+                newData: result as any, // Salva o JSON do objeto criado
+                userId: (args.data as any).userId || null,
+              },
+            }).catch((err: any) => console.error('Erro ao gravar AuditLog automático:', err));
+
+            return result;
+          },
+
+          // Captura qualquer operação de atualização
+          async update({ model, args, query }) {
+            const isSoftDelete = args.data && (args.data as any).deletedAt !== undefined;
+            const actionType = isSoftDelete ? 'DELETE' : 'UPDATE';
+
+            const result = await query(args);
+
+            if (model === 'AuditLog') return result;
+
+            // 🚀 CORRIGIDO: Usamos o cliente base salvo externamente
+            (baseClient as any).auditLog.create({
+              data: {
+                action: actionType,
+                module: model.toUpperCase(),
+                entityId: (result as any).id ? String((result as any).id) : null,
+                newData: result as any,
+              },
+            }).catch((err: any) => console.error('Erro ao gravar AuditLog automático:', err));
+
+            return result;
+          },
+        },
+      },
+    });
   }
 
   async onModuleInit() {
