@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(0,255,200,0.12),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at right,
+      rgba(59,130,246,0.15),
+      transparent 30%
+    ),
+    #030712;
+
+  color: white;
+
+  font-family:
+    Inter,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 999px;
+}

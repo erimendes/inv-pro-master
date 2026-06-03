@@ -26,6 +26,8 @@ log "Instalando Prisma e drivers..."
 npm install @prisma/client pg
 npm install -D prisma @types/pg
 
+npm install csv-parser
+npm install -D tsx
 log "Instalando npm i @prisma/adapter-pg para compatibilidade com Prisma Client v5..."
 npm install -D @prisma/adapter-pg
 
@@ -64,6 +66,10 @@ JWT_SECRET="super-secret"
 GLPI_API_URL="https://seu-glpi.com/apirest.php"
 GLPI_APP_TOKEN="seu_app_token_aqui"
 GLPI_USER_TOKEN="seu_user_token_aqui"
+
+LDAP_URL=ldap://ad.seudominio.local
+LDAP_DOMAIN=seudominio.local
+LDAP_BASE_DN=DC=seudominio,DC=local
 EOF
 
 #########################################

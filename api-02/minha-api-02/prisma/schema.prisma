@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+///////////////////////////////////////////////////////////
+// AUTH / USERS
+///////////////////////////////////////////////////////////
+
+model User {
+  id               String            @id @default(uuid())
+  username         String            @unique
+  email            String            @unique
+  password         String?
+
+  name             String?
+  authProvider     AuthProvider      @default(LOCAL)
+  role             Role              @default(USER)
+
+  departamento     String?
+
+  ultimoLogin      DateTime?
+
+  ativo            Boolean           @default(true)
+
+  sessions         Session[]
+  auditLogs        AuditLog[]
+
+  ativos           Ativo[]
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id               String            @id @default(uuid())
+
+  refreshToken     String            @unique
+
+  userId           String
+
+  user             User              @relation(fields: [userId],references: [id],onDelete: Cascade)
+
+  userAgent        String?
+  ip               String?
+
+  revoked          Boolean           @default(false)
+
+  expiresAt        DateTime
+
+  createdAt        DateTime          @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id               String            @id @default(uuid())
+
+  action           String
+
+  module           String?
+
+  entityId         String?
+
+  oldData          Json?
+  newData          Json?
+
+  userId           String?
+
+  user             User?             @relation(fields: [userId],references: [id],onDelete: SetNull)
+
+  ip               String?
+
+  createdAt        DateTime          @default(now())
+
+  @@index([userId])
+  @@index([module])
+}
+
+///////////////////////////////////////////////////////////
+// RACKS
+///////////////////////////////////////////////////////////
+
+model Rack {
+  id               String            @id @default(uuid())
+
+  nome             String            @unique
+
+  localizacao      String?
+
+  corredor         String?
+
+  capacidade       Int               @default(42)
+
+  observacoes      String?           @db.Text
+
+  ativos           Ativo[]           @relation("RackAtivos")
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  @@index([nome])
+}
+
+///////////////////////////////////////////////////////////
+// INVENTÁRIO
+///////////////////////////////////////////////////////////
+
+model Ativo {
+  id                    Int                  @id @default(autoincrement())
+
+  patrimonio            String?
+
+  tipo                  AtivoTipo           @default(LAPTOP)
+
+  fabricante            String?
+  hardware              String?
+  modelo                String?
+
+  serial                String?             @unique
+
+  hostname              String?             @unique
+
+  apelido               String?
+
+  descricao             String?             @db.Text
+
+  tag                   String?
+
+  ipPrincipal           String?
+
+  sistemaOperacional    String?
+
+  versaoSO              String?
+
+  cpu                   String?
+
+  nucleosCPU            Int?
+
+  threadsCPU            Int?
+
+  ram                   String?
+
+  armazenamento         String?
+
+  gpu                   String?
+
+  macAddress            String?
+
+  status                AtivoStatus         @default(DISPONIVEL)
+
+  powerState            PowerState?
+
+  criticidade           Criticidade         @default(MEDIA)
+
+  emUso                 Boolean             @default(true)
+
+  monitorado            Boolean             @default(true)
+
+  dataCompra            DateTime?
+
+  garantiaFim           DateTime?
+
+  valor                 Decimal?            @db.Decimal(10, 2)
+
+  fornecedor            String?
+
+  observacoes           String?             @db.Text
+
+  /////////////////////////////////////////////////////////
+  // VIRTUALIZAÇÃO
+  /////////////////////////////////////////////////////////
+
+  isVirtualizado        Boolean             @default(false)
+
+  hypervisor            HypervisorTipo?
+
+  vmId                  String?
+
+  cluster               String?
+
+  datacenter            String?
+
+  hostFisicoId          Int?
+
+  host                  Ativo?              @relation("HostVms",fields: [hostFisicoId],references: [id],onDelete: SetNull)
+
+  vms                   Ativo[]             @relation("HostVms")
+
+  /////////////////////////////////////////////////////////
+  // REDE
+  /////////////////////////////////////////////////////////
+
+  configsRede           ConfigRede[]
+
+  /////////////////////////////////////////////////////////
+  // USUÁRIO
+  /////////////////////////////////////////////////////////
+
+  userId                String?
+
+  user                  User?               @relation(fields: [userId],references: [id],onDelete: SetNull)
+
+  /////////////////////////////////////////////////////////
+  // RACK
+  /////////////////////////////////////////////////////////
+
+  rackId                String?
+
+  rack                  Rack?               @relation("RackAtivos",fields: [rackId],references: [id],onDelete: SetNull)
+
+  posicaoRack           Int?
+
+  tamanhoU              Int?
+
+  /////////////////////////////////////////////////////////
+  // APLICAÇÕES
+  /////////////////////////////////////////////////////////
+
+  aplicacoes            Aplicacao[]         @relation("AppServidores")
+
+  /////////////////////////////////////////////////////////
+  // GLPI
+  /////////////////////////////////////////////////////////
+
+  glpiId                Int?
+
+  glpiLastSync          DateTime?
+
+  /////////////////////////////////////////////////////////
+  // TIMESTAMPS
+  /////////////////////////////////////////////////////////
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+
+  /////////////////////////////////////////////////////////
+  // INDEXES
+  /////////////////////////////////////////////////////////
+
+  @@index([hostname])
+  @@index([serial])
+  @@index([tipo])
+  @@index([status])
+  @@index([powerState])
+  @@index([rackId])
+  @@index([hostFisicoId])
+  @@index([userId])
+  @@index([glpiId])
+}
+
+///////////////////////////////////////////////////////////
+// REDE
+///////////////////////////////////////////////////////////
+
+model ConfigRede {
+  id                    Int                 @id @default(autoincrement())
+
+  ipAddress             String?
+
+  macAddress            String?             @unique
+
+  gateway               String?
+
+  mascara               String?
+
+  dns                   String?
+
+  vlan                  Int?
+
+  interface             String?
+
+  velocidade            String?
+
+  portasUTP             Int?
+
+  portasFibra           Int?
+
+  storageConectado      String?
+
+  discoStorage          String?
+
+  ativoId               Int
+
+  ativo                 Ativo               @relation(fields: [ativoId],references: [id],onDelete: Cascade)
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([ipAddress])
+  @@index([ativoId])
+}
+
+///////////////////////////////////////////////////////////
+// APLICAÇÕES
+///////////////////////////////////////////////////////////
+
+model Aplicacao {
+  id                    Int                 @id @default(autoincrement())
+
+  nome                  String
+
+  sigla                 String?             @unique
+
+  descricao             String?             @db.Text
+
+  categoria             SistemaCategoria    @default(OPERACIONAL)
+
+  criticidade           Criticidade         @default(MEDIA)
+
+  businessOwner         String?
+
+  responsavelTecnico    String?
+
+  contatoFuncional      String?
+
+  fornecedor            String?
+
+  url                   String?
+
+  repositorio           String?
+
+  documentacao          String?
+
+  janelaOperacao        String?
+
+  backupInfo            String?
+
+  procedimentoRecup     String?             @db.Text
+
+  pontoUnicoFalha       String?             @db.Text
+
+  tecnologiaPrincipal   String?
+
+  databaseInfo          String?
+
+  integracoes           String?             @db.Text
+
+  servidores            Ativo[]             @relation("AppServidores")
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+
+  @@index([nome])
+  @@index([categoria])
+}
+
+///////////////////////////////////////////////////////////
+// ENUMS
+///////////////////////////////////////////////////////////
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  SUPER_USER
+  MANAGER
+}
+
+enum AtivoTipo {
+  LAPTOP
+  DESKTOP
+  SERVIDOR_FISICO
+  SERVIDOR_VIRTUAL
+  SWITCH
+  ROTEADOR
+  STORAGE
+  FIREWALL
+  ACCESS_POINT
+  IMPRESSORA
+  MONITOR
+  NOBREAK
+}
+
+enum AtivoStatus {
+  DISPONIVEL
+  EM_USO
+  MANUTENCAO
+  DESCARTADO
+}
+
+enum PowerState {
+  ON
+  OFF
+  SUSPENDED
+  PAUSED
+}
+
+enum SistemaCategoria {
+  ADMINISTRATIVO
+  OPERACIONAL
+  MONITORAMENTO
+  DEVOPS
+  SEGURANCA
+}
+
+enum Criticidade {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum HypervisorTipo {
+  VMWARE
+  HYPERV
+  PROXMOX
+  KVM
+  XEN
+}
+
+enum AuthProvider {
+  LOCAL
+  AD
+}

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root {
+  --primary: 16 185 129;
+  --primary-hover: 52 211 153;
+}
+
+body {
+  background-color: #020617;
+  color: #e2e8f0;
+}

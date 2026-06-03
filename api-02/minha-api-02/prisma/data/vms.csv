@@ -1,0 +1,9 @@
+hardware;hostname;ipRede;sistOper;oQueRoda;apelido;patrimonio;serial;cpu;ram;discoFisico;isVirtualizado;hostHostname
+Virtual;VM-SQL-01;192.168.1.11;Ubuntu 22.04;PostgreSQL;Banco Principal;PAT-VM-01;VM-SN-001;4 vCPU;16GB;500GB;true;SRV-HYPERV-01
+Virtual;VM-WEB-01;192.168.1.12;Ubuntu 22.04;Nginx;Servidor Web;PAT-VM-02;VM-SN-002;2 vCPU;8GB;200GB;true;SRV-HYPERV-01
+Virtual;VM-APP-01;192.168.1.13;Ubuntu 22.04;API Node;Aplicação;PAT-VM-03;VM-SN-003;4 vCPU;8GB;300GB;true;SRV-HYPERV-01
+Virtual;VM-DEV-01;192.168.1.14;Ubuntu 22.04;Dev Env;Desenvolvimento;PAT-VM-04;VM-SN-004;2 vCPU;8GB;100GB;true;SRV-HYPERV-01
+Virtual;VM-DB-02;192.168.1.15;Ubuntu 22.04;PostgreSQL Replica;Banco Secundário;PAT-VM-05;VM-SN-005;4 vCPU;16GB;500GB;true;SRV-HYPERV-01
+Virtual;VM-CACHE-01;192.168.1.16;Ubuntu 22.04;Redis;Cache Sistema;PAT-VM-06;VM-SN-006;2 vCPU;4GB;50GB;true;SRV-HYPERV-01
+Virtual;VM-MON-01;192.168.1.17;Ubuntu 22.04;Zabbix;Monitoramento;PAT-VM-07;VM-SN-007;2 vCPU;8GB;100GB;true;SRV-HYPERV-01
+Virtual;VM-BKP-01;192.168.1.18;Ubuntu 22.04;Backup Server;Backup Central;PAT-VM-08;VM-SN-008;4 vCPU;8GB;1000GB;true;SRV-HYPERV-01
