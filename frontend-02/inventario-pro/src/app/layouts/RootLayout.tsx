@@ -28,22 +28,28 @@ import { Outlet } from 'react-router-dom';
 import Header from '../../shared/components/header/Header';
 import Footer from '../../shared/components/footer/Footer';
 import Sidebar from '../../shared/components/body/Sidebar';
+import { useAuth } from '../../modules/auth/context/AuthContext'; // Importe o seu hook de autenticação
 
 export default function MainLayout() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+
   return (
     <div className="min-h-screen bg-[#070a13] text-slate-100 flex flex-col">
-      {/* O seu Header antigo continua aqui, intacto */}
+      {/* O Header gerencia internamente a Navbar baseado no role */}
       <Header />
 
       {/* Container inferior estruturado em linha */}
       <div className="flex flex-1 w-full relative">
         
-        {/* Sidebar totalmente isolada que empurra o conteúdo sozinha */}
-        <Sidebar />
+        {/* CONDICIONAL: A Sidebar só aparece e empurra o conteúdo se for ADMIN */}
+        {isAdmin && <Sidebar />}
         
-        {/* O Main se adapta sozinho sem precisar saber o tamanho da barra */}
+        {/* O Main se adapta sozinho */}
         <main className="flex-1 min-w-0">
-          <div className="p-8 lg:p-12">
+          {/* Se for ADMIN mantém os paddings grandes originais.
+              Se for USER comum, deixamos o padding reduzido ou zerado para não espremer a tela. */}
+          <div className={isAdmin ? "p-8 lg:p-12" : "p-4"}>
             <Outlet />
           </div>
         </main>

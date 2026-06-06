@@ -138,15 +138,13 @@ export default function Navbar() {
   const { user } = useAuth();
 
   // =========================
-  // ROLE FILTER
+  // ROLE FILTER (Corrigido para ocultar se não for ADMIN)
   // =========================
 
   const visibleLinks =
-    user?.role === 'USER'
+    user?.role !== 'ADMIN'
       ? links.filter((link) =>
-          ['/', '/applications'].includes(
-            link.to,
-          ),
+          ['/', '/applications'].includes(link.to),
         )
       : links;
 
@@ -228,16 +226,15 @@ export default function Navbar() {
                   items-center
                   justify-center
                 "
-              >
-                <Icon
-                  size={18}
-                  className="
-                    transition-transform
-                    duration-300
-                    group-hover:scale-110
-                  "
-                />
-              </div>
+              />
+              <Icon
+                size={18}
+                className="
+                  transition-transform
+                  duration-300
+                  group-hover:scale-110
+                "
+              />
 
               {/* label */}
               <span
@@ -267,14 +264,11 @@ export default function Navbar() {
                   transition-all
                   duration-300
                   ${
-                    link.color ===
-                    'cyan'
+                    link.color === 'cyan'
                       ? 'bg-cyan-400 group-hover:w-10'
-                      : link.color ===
-                          'emerald'
+                      : link.color === 'emerald'
                         ? 'bg-emerald-400 group-hover:w-10'
-                        : link.color ===
-                            'violet'
+                        : link.color === 'violet'
                           ? 'bg-violet-400 group-hover:w-10'
                           : 'bg-orange-400 group-hover:w-10'
                   }

@@ -127,20 +127,46 @@ export default function HomePage() {
     );
   }
 
+  // ==========================================
+  // TELA PARA USUÁRIO COMUM (NÃO-ADMIN)
+  // ==========================================
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen bg-[#030712] text-white">
+        <main className="min-w-0 flex-1 px-8 pt-10 pb-10 flex flex-col items-center justify-center text-center">
+          <div className="max-w-md rounded-3xl border border-white/5 bg-slate-900/60 p-8 shadow-xl">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-400">
+              <LayoutDashboard size={32} />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight mb-2">
+              Olá, {currentUser?.name || 'Usuário'}!
+            </h1>
+            <p className="text-slate-400 mb-6 text-sm leading-relaxed">
+              Sua conta foi autenticada com sucesso, mas você não possui privilégios de <strong>Administrador</strong> para gerenciar a infraestrutura e visualizar as métricas globais do Datacenter.
+            </p>
+            <div className="text-xs text-slate-500 border-t border-white/5 pt-4">
+              Caso necessite de permissões elevadas, entre em contato com o administrador do sistema.
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // TELA ORIGINAL PARA ADMINISTRADOR
+  // ==========================================
   return (
     <div className="flex min-h-screen bg-[#030712] text-white">
       {/* CONTENT */}
-      {/* CORREÇÃO: Mudado de p-10 para px-8 pt-4 pb-10 para colar o conteúdo no cabeçalho */}
       <main className="min-w-0 flex-1 overflow-hidden px-8 pt-4 pb-10">
         
         {/* TOPBAR */}
-        {/* CORREÇÃO: Mudado de mb-10 para mb-6 para aproximar os KPIs do título */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-5xl font-black tracking-tight">
               Dashboard
             </h1>
-            {/* CORREÇÃO: Mudado de mt-4 para mt-1 */}
             <p className="mt-1 text-base text-slate-400">
               Gestão corporativa da infraestrutura
             </p>

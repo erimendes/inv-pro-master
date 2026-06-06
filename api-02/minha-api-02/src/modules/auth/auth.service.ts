@@ -1,8 +1,8 @@
-import { 
-  Injectable, 
-  UnauthorizedException, 
-  ConflictException, 
-  BadRequestException 
+// src/modules/auth/auth.service.ts
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -11,47 +11,27 @@ import * as argon2 from 'argon2';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LdapService } from './ldap.service';
 
+interface LoginCredentials {
+  username?: string;
+  email?: string;
+  password?: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
-    private users: UserService,
-    private prisma: PrismaService,
-    private jwt: JwtService,
-    private ldapService: LdapService,
+    private readonly userService: UserService,
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly ldapService: LdapService,
   ) {}
 
   async register(dto: CreateUserDto) {
-    // 1. Verifica se já existe no banco de dados local
-    const existing = await this.prisma.client.user.findFirst({
-      where: {
-        OR: [
-          { username: dto.username },
-          { email: dto.email },
-        ],
-      },
-    });
-
-    if (existing) {
-      throw new ConflictException('Usuário ou E-mail já cadastrado localmente');
-    }
-
-    let password = '';
     const provider = dto.authProvider || 'AD';
 
-    // 2. Fluxo se for LOCAL: Senha obrigatória + Hash
-    if (provider === 'LOCAL') {
-      if (!dto.password) {
-        throw new ConflictException(
-          'Senha obrigatória para usuário LOCAL',
-        );
-      }
-      password = await argon2.hash(dto.password);
-    }
-
-    // 3. Fluxo se for AD: Valida se existe no AD (SEM pedir ou usar senha)
+    // Se for AD, a validação externa ainda acontece no fluxo de Auth
     if (provider === 'AD') {
       const userExistsInAd = await this.ldapService.findUser(dto.username);
-
       if (!userExistsInAd) {
         throw new BadRequestException(
           'Este usuário não existe no Active Directory da empresa',
@@ -59,167 +39,81 @@ export class AuthService {
       }
     }
 
-    // 4. Salva no banco local (se for AD, a senha vai em branco '')
-    const user = await this.prisma.client.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email,
-        password, 
-        name: dto.name,
-        role: dto.role || 'USER',
-        authProvider: provider,
-        ativo: dto.ativo ?? true,
-      },
-    });
-
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      authProvider: user.authProvider,
-    };
+    // Delega a criação e validações locais para quem é dono da entidade User
+    return this.userService.create(dto);
   }
 
   async login(
-    data: any,
-    meta: {
-      ip?: string;
-      userAgent?: string;
-    },
+    credentials: LoginCredentials,
+    meta: { ip?: string; userAgent?: string },
   ) {
-    const user =
-      await this.prisma.client.user.findFirst({
-        where: {
-          OR: [
-            {
-              username: data.username,
-            },
-            {
-              email: data.email,
-            },
-          ],
-        },
-      });
-
-    if (!user) {
-      throw new UnauthorizedException(
-        'Usuário não autorizado',
-      );
+    const identifier = credentials.username || credentials.email;
+    if (!identifier || !credentials.password) {
+      throw new BadRequestException('Credenciais incompletas');
     }
 
-    if (!user.ativo) {
-      throw new UnauthorizedException(
-        'Usuário inativo',
-      );
+    const user = await this.userService.findByEmailOrUsername(identifier);
+
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuário não autorizado ou inativo');
     }
 
-    //
-    // AUTENTICAÇÃO ACTIVE DIRECTORY
-    //
+    // --- AUTENTICAÇÃO ACTIVE DIRECTORY ---
     if (user.authProvider === 'AD') {
-      const adUser =
-        await this.ldapService.authenticate(
-          user.username,
-          data.password,
-        );
+      const adUser = await this.ldapService.authenticate(
+        user.username,
+        credentials.password,
+      );
 
       if (!adUser) {
-        throw new UnauthorizedException(
-          'Credenciais inválidas no Active Directory',
-        );
+        throw new UnauthorizedException('Credenciais inválidas no Active Directory');
       }
 
-      // Atualiza informações vindas do AD
       await this.prisma.client.user.update({
-        where: {
-          id: user.id,
-        },
+        where: { id: user.id },
         data: {
           ultimoLogin: new Date(),
-          name:
-            String(
-              adUser.displayName ||
-              user.name ||
-              user.username,
-            ),
-          email:
-            String(
-              adUser.mail ||
-              user.email,
-            ),
+          name: String(adUser.displayName || user.name || user.username),
+          email: String(adUser.mail || user.email),
         },
       });
     }
 
-    //
-    // AUTENTICAÇÃO LOCAL
-    //
+    // --- AUTENTICAÇÃO LOCAL ---
     if (user.authProvider === 'LOCAL') {
       if (!user.password) {
-        throw new UnauthorizedException(
-          'Usuário sem senha cadastrada',
-        );
+        throw new UnauthorizedException('Usuário sem senha cadastrada');
       }
 
-      const valid =
-        await argon2.verify(
-          user.password,
-          data.password,
-        );
+      const isPasswordValid = await argon2.verify(user.password, credentials.password);
 
-      if (!valid) {
-        throw new UnauthorizedException(
-          'Credenciais inválidas',
-        );
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Credenciais inválidas');
       }
 
       await this.prisma.client.user.update({
-        where: {
-          id: user.id,
-        },
-        data: {
-          ultimoLogin: new Date(),
-        },
+        where: { id: user.id },
+        data: { ultimoLogin: new Date() },
       });
     }
 
-    //
-    // CRIA SESSÃO
-    //
-    const session =
-      await this.prisma.client.session.create({
-        data: {
-          userId: user.id,
-          refreshToken: '',
-          expiresAt: new Date(
-            Date.now() +
-              7 * 24 * 60 * 60 * 1000,
-          ),
-          ip: meta.ip || null,
-          userAgent:
-            meta.userAgent || null,
-        },
-      });
+    // --- CRIAÇÃO DE SESSÃO ---
+    const session = await this.prisma.client.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: '',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ip: meta.ip || null,
+        userAgent: meta.userAgent || null,
+      },
+    });
 
-    const tokens =
-      await this.generateTokens(
-        user,
-        session.id,
-      );
-
-    const hashedRt =
-      await argon2.hash(
-        tokens.refreshToken,
-      );
+    const tokens = await this.generateTokens(user, session.id);
+    const hashedRt = await argon2.hash(tokens.refreshToken);
 
     await this.prisma.client.session.update({
-      where: {
-        id: session.id,
-      },
-      data: {
-        refreshToken: hashedRt,
-      },
+      where: { id: session.id },
+      data: { refreshToken: hashedRt },
     });
 
     return {
@@ -229,8 +123,7 @@ export class AuthService {
       name: user.name,
       email: user.email,
       role: user.role,
-      authProvider:
-        user.authProvider,
+      authProvider: user.authProvider,
     };
   }
 
@@ -245,12 +138,13 @@ export class AuthService {
       });
 
       for (const session of sessions) {
-        const valid = await argon2.verify(session.refreshToken, refreshToken);
+        const isValid = await argon2.verify(session.refreshToken, refreshToken);
 
-        if (valid) {
-          const user = await this.users.findByEmail(payload.email);
+        if (isValid) {
+          const user = await this.userService.findByEmailOrUsername(payload.email);
           if (!user) throw new UnauthorizedException();
 
+          // Revoga sessão antiga e gera uma nova (Refresh Token Rotation)
           await this.prisma.client.session.update({
             where: { id: session.id },
             data: { revoked: true },
@@ -293,10 +187,7 @@ export class AuthService {
 
   async logoutAll(userId: string) {
     await this.prisma.client.session.updateMany({
-      where: { 
-        userId: userId, 
-        revoked: false 
-      },
+      where: { userId, revoked: false },
       data: { revoked: true },
     });
 
@@ -317,9 +208,6 @@ export class AuthService {
       this.jwt.signAsync(payload, { expiresIn: '7d' }),
     ]);
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return { accessToken, refreshToken };
   }
 }

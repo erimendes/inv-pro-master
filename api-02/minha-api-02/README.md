@@ -96,3 +96,40 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+Claro — aqui está cada pacote separado, um por linha:
+
+## Dependencies
+
+```bash
+npm install @nestjs/platform-express
+npm install axios
+npm install bcrypt
+npm install passport
+npm install reflect-metadata
+npm install rxjs
+npm install swagger-ui-express
+npm install dotenv
+npm install @nestjs/mapped-types
+```
+
+## DevDependencies
+
+```bash
+npm install -D @eslint/eslintrc
+npm install -D @nestjs/cli
+npm install -D @nestjs/schematics
+npm install -D @types/bcrypt
+npm install -D @types/express
+npm install -D @types/jest
+npm install -D eslint
+npm install -D eslint-config-prettier
+npm install -D jest
+npm install -D prettier
+npm install -D source-map-support
+npm install -D ts-loader
+npm install -D ts-node
+npm install -D tsconfig-paths
+npm install -D tsx
+npm install -D typescript
+```

@@ -6,6 +6,7 @@ import { useAuth } from '../../../modules/auth/context/AuthContext';
 
 export default function Header() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <header
@@ -34,10 +35,10 @@ export default function Header() {
 
         <Logo />
 
-        {/* Só mostra menu se logado */}
-        {user && <Navbar />}
+        {/* CORREÇÃO: Só mostra o menu superior se o usuário for ADMIN */}
+        {user && isAdmin && <Navbar />}
 
-        {/* Só mostra user menu se logado */}
+        {/* Só mostra user menu se logado (Mantém a foto e botão Sair do usuário comum) */}
         {user ? (
           <UserMenu />
         ) : (

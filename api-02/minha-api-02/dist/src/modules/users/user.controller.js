@@ -28,6 +28,10 @@ let UserController = class UserController {
     constructor(service) {
         this.service = service;
     }
+    updateMe(req, body) {
+        const userId = req.user.sub;
+        return this.service.update(userId, body);
+    }
     create(body) {
         return this.service.create(body);
     }
@@ -40,69 +44,14 @@ let UserController = class UserController {
     update(id, body) {
         return this.service.update(id, body);
     }
-    updateMe(req, body) {
-        const userId = req.user.sub ||
-            req.user.userId;
-        return this.service.update(userId, body);
-    }
     remove(id) {
         return this.service.remove(id);
     }
 };
 exports.UserController = UserController;
 __decorate([
-    (0, common_1.Post)(),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Provisionar novo usuário (Admin)',
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 201,
-        description: 'Usuário criado com sucesso',
-    }),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto]),
-    __metadata("design:returntype", void 0)
-], UserController.prototype, "create", null);
-__decorate([
-    (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Listar todos os usuários',
-    }),
-    openapi.ApiResponse({ status: 200, type: Object }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], UserController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Buscar usuário por ID',
-    }),
-    openapi.ApiResponse({ status: 200, type: Object }),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], UserController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Atualizar usuário por ID',
-    }),
-    openapi.ApiResponse({ status: 200, type: Object }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_user_dto_1.UpdateUserDto]),
-    __metadata("design:returntype", void 0)
-], UserController.prototype, "update", null);
-__decorate([
     (0, common_1.Patch)('me'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Atualizar meu próprio perfil',
-    }),
+    (0, swagger_1.ApiOperation)({ summary: 'Atualizar meu próprio perfil' }),
     openapi.ApiResponse({ status: 200, type: Object }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
@@ -111,10 +60,49 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "updateMe", null);
 __decorate([
+    (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Provisionar novo usuário (Admin)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Usuário criado com sucesso' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto]),
+    __metadata("design:returntype", void 0)
+], UserController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Listar todos os usuários' }),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UserController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Buscar usuário por ID' }),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UserController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Atualizar usuário por ID' }),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_user_dto_1.UpdateUserDto]),
+    __metadata("design:returntype", void 0)
+], UserController.prototype, "update", null);
+__decorate([
     (0, common_1.Delete)(':id'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Deletar usuário',
-    }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Deletar usuário' }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -125,7 +113,6 @@ exports.UserController = UserController = __decorate([
     (0, swagger_1.ApiTags)('users'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [user_service_1.UserService])
 ], UserController);

@@ -50,96 +50,46 @@ const jwt_1 = require("@nestjs/jwt");
 const argon2 = __importStar(require("argon2"));
 const ldap_service_1 = require("./ldap.service");
 let AuthService = class AuthService {
-    users;
+    userService;
     prisma;
     jwt;
     ldapService;
-    constructor(users, prisma, jwt, ldapService) {
-        this.users = users;
+    constructor(userService, prisma, jwt, ldapService) {
+        this.userService = userService;
         this.prisma = prisma;
         this.jwt = jwt;
         this.ldapService = ldapService;
     }
     async register(dto) {
-        const existing = await this.prisma.client.user.findFirst({
-            where: {
-                OR: [
-                    { username: dto.username },
-                    { email: dto.email },
-                ],
-            },
-        });
-        if (existing) {
-            throw new common_1.ConflictException('Usuário ou E-mail já cadastrado localmente');
-        }
-        let password = '';
         const provider = dto.authProvider || 'AD';
-        if (provider === 'LOCAL') {
-            if (!dto.password) {
-                throw new common_1.ConflictException('Senha obrigatória para usuário LOCAL');
-            }
-            password = await argon2.hash(dto.password);
-        }
         if (provider === 'AD') {
             const userExistsInAd = await this.ldapService.findUser(dto.username);
             if (!userExistsInAd) {
                 throw new common_1.BadRequestException('Este usuário não existe no Active Directory da empresa');
             }
         }
-        const user = await this.prisma.client.user.create({
-            data: {
-                username: dto.username,
-                email: dto.email,
-                password,
-                name: dto.name,
-                role: dto.role || 'USER',
-                authProvider: provider,
-                ativo: dto.ativo ?? true,
-            },
-        });
-        return {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            authProvider: user.authProvider,
-        };
+        return this.userService.create(dto);
     }
-    async login(data, meta) {
-        const user = await this.prisma.client.user.findFirst({
-            where: {
-                OR: [
-                    {
-                        username: data.username,
-                    },
-                    {
-                        email: data.email,
-                    },
-                ],
-            },
-        });
-        if (!user) {
-            throw new common_1.UnauthorizedException('Usuário não autorizado');
+    async login(credentials, meta) {
+        const identifier = credentials.username || credentials.email;
+        if (!identifier || !credentials.password) {
+            throw new common_1.BadRequestException('Credenciais incompletas');
         }
-        if (!user.ativo) {
-            throw new common_1.UnauthorizedException('Usuário inativo');
+        const user = await this.userService.findByEmailOrUsername(identifier);
+        if (!user || !user.ativo) {
+            throw new common_1.UnauthorizedException('Usuário não autorizado ou inativo');
         }
         if (user.authProvider === 'AD') {
-            const adUser = await this.ldapService.authenticate(user.username, data.password);
+            const adUser = await this.ldapService.authenticate(user.username, credentials.password);
             if (!adUser) {
                 throw new common_1.UnauthorizedException('Credenciais inválidas no Active Directory');
             }
             await this.prisma.client.user.update({
-                where: {
-                    id: user.id,
-                },
+                where: { id: user.id },
                 data: {
                     ultimoLogin: new Date(),
-                    name: String(adUser.displayName ||
-                        user.name ||
-                        user.username),
-                    email: String(adUser.mail ||
-                        user.email),
+                    name: String(adUser.displayName || user.name || user.username),
+                    email: String(adUser.mail || user.email),
                 },
             });
         }
@@ -147,25 +97,20 @@ let AuthService = class AuthService {
             if (!user.password) {
                 throw new common_1.UnauthorizedException('Usuário sem senha cadastrada');
             }
-            const valid = await argon2.verify(user.password, data.password);
-            if (!valid) {
+            const isPasswordValid = await argon2.verify(user.password, credentials.password);
+            if (!isPasswordValid) {
                 throw new common_1.UnauthorizedException('Credenciais inválidas');
             }
             await this.prisma.client.user.update({
-                where: {
-                    id: user.id,
-                },
-                data: {
-                    ultimoLogin: new Date(),
-                },
+                where: { id: user.id },
+                data: { ultimoLogin: new Date() },
             });
         }
         const session = await this.prisma.client.session.create({
             data: {
                 userId: user.id,
                 refreshToken: '',
-                expiresAt: new Date(Date.now() +
-                    7 * 24 * 60 * 60 * 1000),
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 ip: meta.ip || null,
                 userAgent: meta.userAgent || null,
             },
@@ -173,12 +118,8 @@ let AuthService = class AuthService {
         const tokens = await this.generateTokens(user, session.id);
         const hashedRt = await argon2.hash(tokens.refreshToken);
         await this.prisma.client.session.update({
-            where: {
-                id: session.id,
-            },
-            data: {
-                refreshToken: hashedRt,
-            },
+            where: { id: session.id },
+            data: { refreshToken: hashedRt },
         });
         return {
             ...tokens,
@@ -199,9 +140,9 @@ let AuthService = class AuthService {
                 where: { userId: payload.sub, revoked: false },
             });
             for (const session of sessions) {
-                const valid = await argon2.verify(session.refreshToken, refreshToken);
-                if (valid) {
-                    const user = await this.users.findByEmail(payload.email);
+                const isValid = await argon2.verify(session.refreshToken, refreshToken);
+                if (isValid) {
+                    const user = await this.userService.findByEmailOrUsername(payload.email);
                     if (!user)
                         throw new common_1.UnauthorizedException();
                     await this.prisma.client.session.update({
@@ -239,10 +180,7 @@ let AuthService = class AuthService {
     }
     async logoutAll(userId) {
         await this.prisma.client.session.updateMany({
-            where: {
-                userId: userId,
-                revoked: false
-            },
+            where: { userId, revoked: false },
             data: { revoked: true },
         });
         return { message: 'Logout de todos os dispositivos realizado' };
@@ -259,10 +197,7 @@ let AuthService = class AuthService {
             this.jwt.signAsync(payload, { expiresIn: '15m' }),
             this.jwt.signAsync(payload, { expiresIn: '7d' }),
         ]);
-        return {
-            accessToken,
-            refreshToken,
-        };
+        return { accessToken, refreshToken };
     }
 };
 exports.AuthService = AuthService;

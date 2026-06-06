@@ -12,7 +12,7 @@ export default function SidebarNavbar({ isExpanded }: SidebarNavbarProps) {
   const menuItems = [
     { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { label: 'Racks', path: '/racks', icon: <Server size={20} /> },
-    { label: 'Ativos', path: '/assets', icon: <Laptop size={20} /> },
+    { label: 'Ativo', path: '/assets', icon: <Laptop size={20} /> },
     { label: 'Aplicações', path: '/applications', icon: <Layers3 size={20} /> },
     { label: 'Usuários', path: '/users', icon: <Users size={20} /> },
   ];

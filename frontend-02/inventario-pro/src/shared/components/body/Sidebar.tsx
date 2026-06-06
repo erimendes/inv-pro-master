@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../modules/auth/context/AuthContext';
 import { 
   LayoutDashboard, 
   Server, 
@@ -13,15 +14,23 @@ import {
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const menuItems = [
+  const allMenuItems = [
     { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { label: 'Racks', path: '/racks', icon: <Server size={20} /> },
     { label: 'Ativos', path: '/assets', icon: <Laptop size={20} /> },
     { label: 'Aplicações', path: '/applications', icon: <Layers3 size={20} /> },
     { label: 'Usuários', path: '/users', icon: <Users size={20} /> },
   ];
+
+  // ==========================================
+  // FILTRO DO MENU LATERAL POR CARGO
+  // ==========================================
+  const menuItems = user?.role !== 'ADMIN'
+    ? allMenuItems.filter(item => ['/dashboard', '/applications'].includes(item.path))
+    : allMenuItems;
 
   return (
     <div className="relative sticky top-20 z-40 shrink-0 h-[calc(100vh-80px)]">
@@ -47,12 +56,12 @@ export default function Sidebar() {
         <nav className="flex-1">
           <ul className="flex flex-col gap-2 w-full list-none m-0 p-0">
             {menuItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
+              const isActive = location.pathname.startsWith(item.path) || (item.path === '/dashboard' && location.pathname === '/');
 
               return (
                 <li key={item.path} className="w-full">
                   <button
-                    onClick={() => navigate(item.path)}
+                    onClick={() => navigate(item.path === '/dashboard' ? '/' : item.path)}
                     title={!isExpanded ? item.label : undefined}
                     className={`
                       flex items-center w-full rounded-xl py-3 transition-all duration-200

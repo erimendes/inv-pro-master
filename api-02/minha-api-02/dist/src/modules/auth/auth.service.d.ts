@@ -3,20 +3,19 @@ import { PrismaService } from '../../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LdapService } from './ldap.service';
+interface LoginCredentials {
+    username?: string;
+    email?: string;
+    password?: string;
+}
 export declare class AuthService {
-    private users;
-    private prisma;
-    private jwt;
-    private ldapService;
-    constructor(users: UserService, prisma: PrismaService, jwt: JwtService, ldapService: LdapService);
-    register(dto: CreateUserDto): Promise<{
-        id: any;
-        username: any;
-        email: any;
-        role: any;
-        authProvider: any;
-    }>;
-    login(data: any, meta: {
+    private readonly userService;
+    private readonly prisma;
+    private readonly jwt;
+    private readonly ldapService;
+    constructor(userService: UserService, prisma: PrismaService, jwt: JwtService, ldapService: LdapService);
+    register(dto: CreateUserDto): Promise<any>;
+    login(credentials: LoginCredentials, meta: {
         ip?: string;
         userAgent?: string;
     }): Promise<{
@@ -41,3 +40,4 @@ export declare class AuthService {
     }>;
     private generateTokens;
 }
+export {};
