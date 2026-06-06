@@ -14,22 +14,37 @@ const openapi = require("@nestjs/swagger");
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 class LoginDto {
+    username;
     email;
     password;
     static _OPENAPI_METADATA_FACTORY() {
-        return { email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 6 } };
+        return { username: { required: false, type: () => String }, email: { required: false, type: () => String, format: "email" }, password: { required: true, type: () => String } };
     }
 }
 exports.LoginDto = LoginDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'teste01@teste.com' }),
+    (0, swagger_1.ApiProperty)({
+        description: 'Username do usuário (obrigatório se o e-mail não for enviado)',
+        example: 'johndoe'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], LoginDto.prototype, "username", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'E-mail do usuário (obrigatório se o username não for enviado)',
+        example: 'john@empresa.com'
+    }),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], LoginDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '123456' }),
+    (0, swagger_1.ApiProperty)({ description: 'Senha do usuário', example: 'Senha@123' }),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(6),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
 //# sourceMappingURL=login.dto.js.map

@@ -93,9 +93,9 @@ let AuthService = class AuthService {
                 },
             });
         }
-        if (user.authProvider === 'LOCAL') {
+        else if (user.authProvider === 'LOCAL') {
             if (!user.password) {
-                throw new common_1.UnauthorizedException('Usuário sem senha cadastrada');
+                throw new common_1.UnauthorizedException('Usuário local configurado sem senha');
             }
             const isPasswordValid = await argon2.verify(user.password, credentials.password);
             if (!isPasswordValid) {
@@ -106,20 +106,22 @@ let AuthService = class AuthService {
                 data: { ultimoLogin: new Date() },
             });
         }
-        const session = await this.prisma.client.session.create({
+        else {
+            throw new common_1.UnauthorizedException('Provedor de autenticação inválido');
+        }
+        const crypto = await import('crypto');
+        const sessionId = crypto.randomUUID();
+        const tokens = await this.generateTokens(user, sessionId);
+        const hashedRt = await argon2.hash(tokens.refreshToken);
+        await this.prisma.client.session.create({
             data: {
+                id: sessionId,
                 userId: user.id,
-                refreshToken: '',
+                refreshToken: hashedRt,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 ip: meta.ip || null,
                 userAgent: meta.userAgent || null,
             },
-        });
-        const tokens = await this.generateTokens(user, session.id);
-        const hashedRt = await argon2.hash(tokens.refreshToken);
-        await this.prisma.client.session.update({
-            where: { id: session.id },
-            data: { refreshToken: hashedRt },
         });
         return {
             ...tokens,
@@ -142,25 +144,26 @@ let AuthService = class AuthService {
             for (const session of sessions) {
                 const isValid = await argon2.verify(session.refreshToken, refreshToken);
                 if (isValid) {
-                    const user = await this.userService.findByEmailOrUsername(payload.email);
-                    if (!user)
+                    const user = await this.prisma.client.user.findUnique({
+                        where: { id: payload.sub },
+                    });
+                    if (!user || !user.ativo)
                         throw new common_1.UnauthorizedException();
                     await this.prisma.client.session.update({
                         where: { id: session.id },
                         data: { revoked: true },
                     });
-                    const newSession = await this.prisma.client.session.create({
+                    const crypto = await import('crypto');
+                    const newSessionId = crypto.randomUUID();
+                    const tokens = await this.generateTokens(user, newSessionId);
+                    const hashedRt = await argon2.hash(tokens.refreshToken);
+                    await this.prisma.client.session.create({
                         data: {
+                            id: newSessionId,
                             userId: user.id,
-                            refreshToken: '',
+                            refreshToken: hashedRt,
                             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                         },
-                    });
-                    const tokens = await this.generateTokens(user, newSession.id);
-                    const hashedRt = await argon2.hash(tokens.refreshToken);
-                    await this.prisma.client.session.update({
-                        where: { id: newSession.id },
-                        data: { refreshToken: hashedRt },
                     });
                     return tokens;
                 }

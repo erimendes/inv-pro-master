@@ -10,12 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LdapService } from './ldap.service';
-
-interface LoginCredentials {
-  username?: string;
-  email?: string;
-  password?: string;
-}
+import { LoginDto } from './dto/login.dto'; // Usando o DTO atualizado do passo anterior
 
 @Injectable()
 export class AuthService {
@@ -29,7 +24,6 @@ export class AuthService {
   async register(dto: CreateUserDto) {
     const provider = dto.authProvider || 'AD';
 
-    // Se for AD, a validação externa ainda acontece no fluxo de Auth
     if (provider === 'AD') {
       const userExistsInAd = await this.ldapService.findUser(dto.username);
       if (!userExistsInAd) {
@@ -39,12 +33,11 @@ export class AuthService {
       }
     }
 
-    // Delega a criação e validações locais para quem é dono da entidade User
     return this.userService.create(dto);
   }
 
   async login(
-    credentials: LoginCredentials,
+    credentials: LoginDto,
     meta: { ip?: string; userAgent?: string },
   ) {
     const identifier = credentials.username || credentials.email;
@@ -52,13 +45,16 @@ export class AuthService {
       throw new BadRequestException('Credenciais incompletas');
     }
 
+    // Busca o usuário no banco local (aceita username ou email)
     const user = await this.userService.findByEmailOrUsername(identifier);
 
     if (!user || !user.ativo) {
       throw new UnauthorizedException('Usuário não autorizado ou inativo');
     }
 
-    // --- AUTENTICAÇÃO ACTIVE DIRECTORY ---
+    // -----------------------------------------------------------------
+    // ESTRATÉGIA DE AUTENTICAÇÃO (AD vs LOCAL)
+    // -----------------------------------------------------------------
     if (user.authProvider === 'AD') {
       const adUser = await this.ldapService.authenticate(
         user.username,
@@ -77,16 +73,12 @@ export class AuthService {
           email: String(adUser.mail || user.email),
         },
       });
-    }
-
-    // --- AUTENTICAÇÃO LOCAL ---
-    if (user.authProvider === 'LOCAL') {
+    } else if (user.authProvider === 'LOCAL') {
       if (!user.password) {
-        throw new UnauthorizedException('Usuário sem senha cadastrada');
+        throw new UnauthorizedException('Usuário local configurado sem senha');
       }
 
       const isPasswordValid = await argon2.verify(user.password, credentials.password);
-
       if (!isPasswordValid) {
         throw new UnauthorizedException('Credenciais inválidas');
       }
@@ -95,25 +87,30 @@ export class AuthService {
         where: { id: user.id },
         data: { ultimoLogin: new Date() },
       });
+    } else {
+      throw new UnauthorizedException('Provedor de autenticação inválido');
     }
 
-    // --- CRIAÇÃO DE SESSÃO ---
-    const session = await this.prisma.client.session.create({
+    // -----------------------------------------------------------------
+    // GERENCIAMENTO DE SESSÃO OTIMIZADO
+    // -----------------------------------------------------------------
+    // Geramos um ID UUID v4 manualmente para evitar a query dupla (Create + Update)
+    const crypto = await import('crypto');
+    const sessionId = crypto.randomUUID();
+
+    const tokens = await this.generateTokens(user, sessionId);
+    const hashedRt = await argon2.hash(tokens.refreshToken);
+
+    // Salva de uma vez só no banco de dados com o Refresh Token já hasheado
+    await this.prisma.client.session.create({
       data: {
+        id: sessionId,
         userId: user.id,
-        refreshToken: '',
+        refreshToken: hashedRt,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ip: meta.ip || null,
         userAgent: meta.userAgent || null,
       },
-    });
-
-    const tokens = await this.generateTokens(user, session.id);
-    const hashedRt = await argon2.hash(tokens.refreshToken);
-
-    await this.prisma.client.session.update({
-      where: { id: session.id },
-      data: { refreshToken: hashedRt },
     });
 
     return {
@@ -141,29 +138,33 @@ export class AuthService {
         const isValid = await argon2.verify(session.refreshToken, refreshToken);
 
         if (isValid) {
-          const user = await this.userService.findByEmailOrUsername(payload.email);
-          if (!user) throw new UnauthorizedException();
+          // CORREÇÃO CRÍTICA: Buscar pelo ID do payload (sub), nunca pelo e-mail
+          const user = await this.prisma.client.user.findUnique({
+            where: { id: payload.sub },
+          });
+          
+          if (!user || !user.ativo) throw new UnauthorizedException();
 
-          // Revoga sessão antiga e gera uma nova (Refresh Token Rotation)
+          // Revoga a sessão antiga (Refresh Token Rotation)
           await this.prisma.client.session.update({
             where: { id: session.id },
             data: { revoked: true },
           });
 
-          const newSession = await this.prisma.client.session.create({
-            data: {
-              userId: user.id,
-              refreshToken: '',
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          });
+          // Cria a nova sessão otimizada sem queries duplicadas
+          const crypto = await import('crypto');
+          const newSessionId = crypto.randomUUID();
 
-          const tokens = await this.generateTokens(user, newSession.id);
+          const tokens = await this.generateTokens(user, newSessionId);
           const hashedRt = await argon2.hash(tokens.refreshToken);
 
-          await this.prisma.client.session.update({
-            where: { id: newSession.id },
-            data: { refreshToken: hashedRt },
+          await this.prisma.client.session.create({
+            data: {
+              id: newSessionId,
+              userId: user.id,
+              refreshToken: hashedRt,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
           });
 
           return tokens;
