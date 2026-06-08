@@ -75,39 +75,56 @@ let AuthService = class AuthService {
         if (!identifier || !credentials.password) {
             throw new common_1.BadRequestException('Credenciais incompletas');
         }
-        const user = await this.userService.findByEmailOrUsername(identifier);
-        if (!user || !user.ativo) {
-            throw new common_1.UnauthorizedException('Usuário não autorizado ou inativo');
+        let user = await this.userService.findByEmailOrUsername(identifier);
+        if (user && !user.ativo) {
+            throw new common_1.UnauthorizedException('Usuário inativo no sistema.');
         }
-        if (user.authProvider === 'AD') {
-            const adUser = await this.ldapService.authenticate(user.username, credentials.password);
+        if (!user || user.authProvider === 'AD') {
+            const adUsername = user ? user.username : identifier.split('@')[0];
+            const adUser = await this.ldapService.authenticate(adUsername, credentials.password);
             if (!adUser) {
-                throw new common_1.UnauthorizedException('Credenciais inválidas no Active Directory');
+                throw new common_1.UnauthorizedException('Credenciais inválidas.');
             }
-            await this.prisma.client.user.update({
-                where: { id: user.id },
-                data: {
-                    ultimoLogin: new Date(),
-                    name: String(adUser.displayName || user.name || user.username),
-                    email: String(adUser.mail || user.email),
-                },
-            });
+            if (!user) {
+                user = await this.prisma.client.user.create({
+                    data: {
+                        username: adUsername,
+                        email: String(adUser.mail || `${adUsername}@empresa.com`),
+                        password: '',
+                        name: String(adUser.displayName || adUsername),
+                        role: 'USER',
+                        authProvider: 'AD',
+                        ativo: true,
+                        ultimoLogin: new Date(),
+                    },
+                });
+            }
+            else {
+                user = await this.prisma.client.user.update({
+                    where: { id: user.id },
+                    data: {
+                        ultimoLogin: new Date(),
+                        name: String(adUser.displayName || user.name || user.username),
+                        email: String(adUser.mail || user.email),
+                    },
+                });
+            }
         }
         else if (user.authProvider === 'LOCAL') {
             if (!user.password) {
-                throw new common_1.UnauthorizedException('Usuário local configurado sem senha');
+                throw new common_1.UnauthorizedException('Usuário local configurado sem senha.');
             }
             const isPasswordValid = await argon2.verify(user.password, credentials.password);
             if (!isPasswordValid) {
-                throw new common_1.UnauthorizedException('Credenciais inválidas');
+                throw new common_1.UnauthorizedException('Credenciais inválidas.');
             }
-            await this.prisma.client.user.update({
+            user = await this.prisma.client.user.update({
                 where: { id: user.id },
                 data: { ultimoLogin: new Date() },
             });
         }
         else {
-            throw new common_1.UnauthorizedException('Provedor de autenticação inválido');
+            throw new common_1.UnauthorizedException('Provedor de autenticação inválido.');
         }
         const crypto = await import('crypto');
         const sessionId = crypto.randomUUID();

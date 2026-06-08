@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LdapService } from './ldap.service';
-import { LoginDto } from './dto/login.dto'; // Usando o DTO atualizado do passo anterior
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -45,63 +45,92 @@ export class AuthService {
       throw new BadRequestException('Credenciais incompletas');
     }
 
-    // Busca o usuário no banco local (aceita username ou email)
-    const user = await this.userService.findByEmailOrUsername(identifier);
+    // 1. Busca se o usuário já tem algum registro no banco local
+    let user = await this.userService.findByEmailOrUsername(identifier);
 
-    if (!user || !user.ativo) {
-      throw new UnauthorizedException('Usuário não autorizado ou inativo');
+    // Se o usuário existir localmente e estiver inativo, barra imediatamente
+    if (user && !user.ativo) {
+      throw new UnauthorizedException('Usuário inativo no sistema.');
     }
 
     // -----------------------------------------------------------------
-    // ESTRATÉGIA DE AUTENTICAÇÃO (AD vs LOCAL)
+    // CENÁRIO A: USUÁRIO NÃO EXISTE NO BANCO OU É DO AD
     // -----------------------------------------------------------------
-    if (user.authProvider === 'AD') {
+    if (!user || user.authProvider === 'AD') {
+      
+      // Se não achou no banco, precisamos do username para mandar pro AD.
+      // Caso ele tenha digitado o email no primeiro login, usamos a parte antes do @ como palpite de username,
+      // ou exigimos o username puro. O ideal para o AD é o username (ex: joao.silva).
+      const adUsername = user ? user.username : identifier.split('@')[0];
+
+      // Tenta autenticar diretamente no Servidor do Active Directory
       const adUser = await this.ldapService.authenticate(
-        user.username,
+        adUsername,
         credentials.password,
       );
 
+      // Se o AD rejeitar as credenciais
       if (!adUser) {
-        throw new UnauthorizedException('Credenciais inválidas no Active Directory');
+        throw new UnauthorizedException('Credenciais inválidas.');
       }
 
-      await this.prisma.client.user.update({
-        where: { id: user.id },
-        data: {
-          ultimoLogin: new Date(),
-          name: String(adUser.displayName || user.name || user.username),
-          email: String(adUser.mail || user.email),
-        },
-      });
-    } else if (user.authProvider === 'LOCAL') {
+      if (!user) {
+        // MÁGICA DO JUST-IN-TIME PROVISIONING:
+        // O AD autenticou, mas o usuário não existe no banco local. Criamos ele agora!
+        user = await this.prisma.client.user.create({
+          data: {
+            username: adUsername,
+            email: String(adUser.mail || `${adUsername}@empresa.com`),
+            password: '', // Sem senha local
+            name: String(adUser.displayName || adUsername),
+            role: 'USER', // Perfil padrão para novos usuários do AD
+            authProvider: 'AD',
+            ativo: true,
+            ultimoLogin: new Date(),
+          },
+        });
+      } else {
+        // Se ele já existia no banco local como AD, apenas atualizamos os dados dele
+        user = await this.prisma.client.user.update({
+          where: { id: user.id },
+          data: {
+            ultimoLogin: new Date(),
+            name: String(adUser.displayName || user.name || user.username),
+            email: String(adUser.mail || user.email),
+          },
+        });
+      }
+    } 
+    // -----------------------------------------------------------------
+    // CENÁRIO B: USUÁRIO EXISTE E É AUTENTICADO LOCALMENTE
+    // -----------------------------------------------------------------
+    else if (user.authProvider === 'LOCAL') {
       if (!user.password) {
-        throw new UnauthorizedException('Usuário local configurado sem senha');
+        throw new UnauthorizedException('Usuário local configurado sem senha.');
       }
 
       const isPasswordValid = await argon2.verify(user.password, credentials.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('Credenciais inválidas');
+        throw new UnauthorizedException('Credenciais inválidas.');
       }
 
-      await this.prisma.client.user.update({
+      user = await this.prisma.client.user.update({
         where: { id: user.id },
         data: { ultimoLogin: new Date() },
       });
     } else {
-      throw new UnauthorizedException('Provedor de autenticação inválido');
+      throw new UnauthorizedException('Provedor de autenticação inválido.');
     }
 
     // -----------------------------------------------------------------
-    // GERENCIAMENTO DE SESSÃO OTIMIZADO
+    // GERENCIAMENTO DE SESSÃO (Mantido idêntico e otimizado)
     // -----------------------------------------------------------------
-    // Geramos um ID UUID v4 manualmente para evitar a query dupla (Create + Update)
     const crypto = await import('crypto');
     const sessionId = crypto.randomUUID();
 
     const tokens = await this.generateTokens(user, sessionId);
     const hashedRt = await argon2.hash(tokens.refreshToken);
 
-    // Salva de uma vez só no banco de dados com o Refresh Token já hasheado
     await this.prisma.client.session.create({
       data: {
         id: sessionId,
