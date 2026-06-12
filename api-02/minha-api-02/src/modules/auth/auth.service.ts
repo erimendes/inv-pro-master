@@ -57,10 +57,6 @@ export class AuthService {
     // CENÁRIO A: USUÁRIO NÃO EXISTE NO BANCO OU É DO AD
     // -----------------------------------------------------------------
     if (!user || user.authProvider === 'AD') {
-      
-      // Se não achou no banco, precisamos do username para mandar pro AD.
-      // Caso ele tenha digitado o email no primeiro login, usamos a parte antes do @ como palpite de username,
-      // ou exigimos o username puro. O ideal para o AD é o username (ex: joao.silva).
       const adUsername = user ? user.username : identifier.split('@')[0];
 
       // Tenta autenticar diretamente no Servidor do Active Directory
@@ -76,14 +72,14 @@ export class AuthService {
 
       if (!user) {
         // MÁGICA DO JUST-IN-TIME PROVISIONING:
-        // O AD autenticou, mas o usuário não existe no banco local. Criamos ele agora!
-        user = await this.prisma.client.user.create({
+        // 🔄 CORREÇÃO: Removido .client da query de criação
+        user = await this.prisma.user.create({
           data: {
             username: adUsername,
             email: String(adUser.mail || `${adUsername}@empresa.com`),
             password: '', // Sem senha local
             name: String(adUser.displayName || adUsername),
-            role: 'USER', // Perfil padrão para novos usuários do AD
+            role: 'USER', 
             authProvider: 'AD',
             ativo: true,
             ultimoLogin: new Date(),
@@ -91,7 +87,8 @@ export class AuthService {
         });
       } else {
         // Se ele já existia no banco local como AD, apenas atualizamos os dados dele
-        user = await this.prisma.client.user.update({
+        // 🔄 CORREÇÃO: Removido .client da query de update
+        user = await this.prisma.user.update({
           where: { id: user.id },
           data: {
             ultimoLogin: new Date(),
@@ -114,7 +111,8 @@ export class AuthService {
         throw new UnauthorizedException('Credenciais inválidas.');
       }
 
-      user = await this.prisma.client.user.update({
+      // 🔄 CORREÇÃO: Removido .client do update
+      user = await this.prisma.user.update({
         where: { id: user.id },
         data: { ultimoLogin: new Date() },
       });
@@ -122,8 +120,14 @@ export class AuthService {
       throw new UnauthorizedException('Provedor de autenticação inválido.');
     }
 
+    // 🔒 COBERTURA DE GUARDA DO TS: 
+    // Garante ao compilador estrito que o objeto 'user' passou por todas as ramificações e está preenchido.
+    if (!user) {
+      throw new UnauthorizedException('Erro ao processar dados de autenticação do usuário.');
+    }
+
     // -----------------------------------------------------------------
-    // GERENCIAMENTO DE SESSÃO (Mantido idêntico e otimizado)
+    // GERENCIAMENTO DE SESSÃO
     // -----------------------------------------------------------------
     const crypto = await import('crypto');
     const sessionId = crypto.randomUUID();
@@ -131,7 +135,8 @@ export class AuthService {
     const tokens = await this.generateTokens(user, sessionId);
     const hashedRt = await argon2.hash(tokens.refreshToken);
 
-    await this.prisma.client.session.create({
+    // 🔄 CORREÇÃO: Removido .client do session.create
+    await this.prisma.session.create({
       data: {
         id: sessionId,
         userId: user.id,
@@ -159,7 +164,8 @@ export class AuthService {
         secret: process.env.JWT_SECRET,
       });
 
-      const sessions = await this.prisma.client.session.findMany({
+      // 🔄 CORREÇÃO: Removido .client do session.findMany
+      const sessions = await this.prisma.session.findMany({
         where: { userId: payload.sub, revoked: false },
       });
 
@@ -167,27 +173,28 @@ export class AuthService {
         const isValid = await argon2.verify(session.refreshToken, refreshToken);
 
         if (isValid) {
-          // CORREÇÃO CRÍTICA: Buscar pelo ID do payload (sub), nunca pelo e-mail
-          const user = await this.prisma.client.user.findUnique({
+          // 🔄 CORREÇÃO: Removido .client do user.findUnique
+          const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
           });
           
           if (!user || !user.ativo) throw new UnauthorizedException();
 
-          // Revoga a sessão antiga (Refresh Token Rotation)
-          await this.prisma.client.session.update({
+          // Revoga a sessão antiga
+          // 🔄 CORREÇÃO: Removido .client do session.update
+          await this.prisma.session.update({
             where: { id: session.id },
             data: { revoked: true },
           });
 
-          // Cria a nova sessão otimizada sem queries duplicadas
           const crypto = await import('crypto');
           const newSessionId = crypto.randomUUID();
 
           const tokens = await this.generateTokens(user, newSessionId);
           const hashedRt = await argon2.hash(tokens.refreshToken);
 
-          await this.prisma.client.session.create({
+          // 🔄 CORREÇÃO: Removido .client do session.create
+          await this.prisma.session.create({
             data: {
               id: newSessionId,
               userId: user.id,
@@ -207,7 +214,8 @@ export class AuthService {
   }
 
   async logout(sessionId: string) {
-    await this.prisma.client.session.update({
+    // 🔄 CORREÇÃO: Removido .client do session.update
+    await this.prisma.session.update({
       where: { id: sessionId },
       data: { revoked: true },
     });
@@ -216,7 +224,8 @@ export class AuthService {
   }
 
   async logoutAll(userId: string) {
-    await this.prisma.client.session.updateMany({
+    // 🔄 CORREÇÃO: Removido .client do session.updateMany
+    await this.prisma.session.updateMany({
       where: { userId, revoked: false },
       data: { revoked: true },
     });

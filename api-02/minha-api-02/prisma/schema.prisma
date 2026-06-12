@@ -363,6 +363,8 @@ model Aplicacao {
 
 enum Role {
   USER
+  USER_INFRA
+  USER_DEV
   ADMIN
   SUPER_ADMIN
   ADMIN_INFRA

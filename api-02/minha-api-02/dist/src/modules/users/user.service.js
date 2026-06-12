@@ -70,7 +70,7 @@ let UserService = class UserService {
             }
             hashedPassword = await argon2.hash(data.password);
         }
-        return this.prisma.client.user.create({
+        return this.prisma.user.create({
             data: {
                 username: data.username,
                 email: data.email,
@@ -84,13 +84,13 @@ let UserService = class UserService {
         });
     }
     async findAll() {
-        return this.prisma.client.user.findMany({
+        return this.prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
             select: this.userSelect,
         });
     }
     async findOne(id) {
-        const user = await this.prisma.client.user.findUnique({
+        const user = await this.prisma.user.findUnique({
             where: { id },
             select: this.userSelect,
         });
@@ -100,7 +100,7 @@ let UserService = class UserService {
         return user;
     }
     async findByEmailOrUsername(identifier) {
-        return this.prisma.client.user.findFirst({
+        return this.prisma.user.findFirst({
             where: {
                 OR: [
                     { email: identifier },
@@ -111,32 +111,59 @@ let UserService = class UserService {
     }
     async update(id, data) {
         const user = await this.findOne(id);
-        if (data.email && data.email !== user.email) {
-            const emailExists = await this.prisma.client.user.findUnique({
-                where: { email: data.email },
+        const updateData = {};
+        const inputData = data;
+        if (inputData.email && inputData.email !== user.email) {
+            const emailExists = await this.prisma.user.findUnique({
+                where: { email: inputData.email },
             });
             if (emailExists) {
                 throw new common_1.ConflictException('E-mail já está em uso');
             }
+            updateData.email = inputData.email;
         }
+        if (inputData.username && inputData.username !== user.username) {
+            const usernameExists = await this.prisma.user.findUnique({
+                where: { username: inputData.username },
+            });
+            if (usernameExists) {
+                throw new common_1.ConflictException('Username já está em uso');
+            }
+            updateData.username = inputData.username;
+        }
+        if (inputData.name)
+            updateData.name = inputData.name;
+        if (inputData.role)
+            updateData.role = inputData.role;
+        if (inputData.ativo !== undefined)
+            updateData.ativo = inputData.ativo;
         if (data.password) {
-            data.password = await argon2.hash(data.password);
+            updateData.password = await argon2.hash(String(data.password));
         }
-        return this.prisma.client.user.update({
-            where: { id },
-            data,
-            select: this.userSelect,
-        });
+        if (Object.keys(updateData).length === 0) {
+            return user;
+        }
+        try {
+            return await this.prisma.user.update({
+                where: { id },
+                data: updateData,
+                select: this.userSelect,
+            });
+        }
+        catch (error) {
+            console.error('Erro no update de usuário:', error);
+            throw new common_1.InternalServerErrorException('Erro interno ao salvar alterações do usuário.');
+        }
     }
     async remove(id) {
         await this.findOne(id);
-        await this.prisma.client.user.delete({
+        await this.prisma.user.delete({
             where: { id },
         });
         return { message: 'Usuário removido com sucesso' };
     }
     async validateUniqueFields(username, email) {
-        const userExists = await this.prisma.client.user.findFirst({
+        const userExists = await this.prisma.user.findFirst({
             where: {
                 OR: [{ email }, { username }],
             },

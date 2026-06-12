@@ -4,14 +4,16 @@ import { Users, Plus, Search, Filter } from 'lucide-react';
 import { useUsersController } from '../controllers/users.controller';
 import { UserCard } from '../components/UserCard';
 import { Pagination } from '../components/Pagination';
+import { useAuth } from '../../../modules/auth/context/AuthContext'; // 🔄 Contexto de autenticação para ler o usuário logado
 
 export default function UsersListPage() {
   const navigate = useNavigate();
   const { users, loading, error, deleteUser } = useUsersController();
+  const { user: currentUser } = useAuth(); // 🔄 Usuário conectado atualmente
   
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   
-  // Estados dos Filtros
+  // Estados os Filtros da Tela
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
@@ -19,26 +21,60 @@ export default function UsersListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // Lógica de Filtragem (Memorizada para performance)
+  // 🔄 LORICA DE FILTRAGEM AVANÇADA: Isolamento Rígido por Departamento/Silo
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
+      const myRole = currentUser?.role || '';
+      const targetRole = user.role || '';
+
+      // 1. Se eu for ADMIN ou SUPER_ADMIN, a segurança é pulada (Visão Global Total)
+      if (myRole !== 'ADMIN' && myRole !== 'SUPER_ADMIN') {
+        
+        // Identificação do grupo do usuário LOGADO
+        const iAmInfra  = myRole.includes('INFRA');
+        const iAmDev    = myRole.includes('DEV') && !myRole.includes('DEVOPS');
+        const iAmDevops = myRole.includes('DEVOPS');
+
+        // Identificação do grupo do usuário ALVO (da lista do banco)
+        const targetIsAdmin  = targetRole === 'ADMIN' || targetRole === 'SUPER_ADMIN';
+        const targetIsInfra  = targetRole.includes('INFRA');
+        const targetIsDev    = targetRole.includes('DEV') && !targetRole.includes('DEVOPS');
+        const targetIsDevops = targetRole.includes('DEVOPS');
+
+        // Regra A: Ninguém abaixo de Admin global pode ver um ADMIN ou SUPER_ADMIN
+        if (targetIsAdmin) return false;
+
+        // Regra B: Se eu sou INFRA (Racks/Ativos), só vejo quem também é da INFRA
+        if (iAmInfra && !targetIsInfra) return false;
+
+        // Regra C: Se eu sou DEV (Aplicações), só vejo quem também é DEV
+        if (iAmDev && !targetIsDev) return false;
+
+        // Regra D: Se eu sou DEVOPS, vejo INFRA, vejo DEV e outros DEVOPS, mas ninguém fora disso
+        if (iAmDevops && !targetIsInfra && !targetIsDev && !targetIsDevops) return false;
+
+        // Regra E: Usuários comuns de ponta (USER) só enxergam outros USERs comuns
+        if (myRole === 'USER' && targetRole !== 'USER') return false;
+      }
+
+      // 2. Filtros Dinâmicos de Tela: Busca por Texto (Nome ou Email)
       const matchesSearch = 
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
         
-      const matchesRole = roleFilter === '' || user.role === roleFilter;
+      // 3. Filtros Dinâmicos de Tela: Select por Cargo Específico
+      const matchesRole = roleFilter === '' || targetRole === roleFilter;
 
       return matchesSearch && matchesRole;
     });
-  }, [users, searchTerm, roleFilter]);
+  }, [users, searchTerm, roleFilter, currentUser]);
 
-  // Cálculos da paginação baseados na lista FILTRADA
+  // Cálculos da paginação baseados na lista filtrada e protegida por escopo
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Reseta para a página 1 sempre que o usuário digita algo no filtro
   const handleSearchChange = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1);
@@ -79,16 +115,16 @@ export default function UsersListPage() {
             </div>
             <div>
               <h1 className="text-4xl font-black tracking-tight text-white">Usuários</h1>
-              <p className="mt-1 text-sm text-slate-400">Gerenciamento de usuários do sistema</p>
+              <p className="mt-1 text-sm text-slate-400">Gerenciamento de contas e isolamento de privilégios</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-1 text-xs font-black uppercase tracking-widest text-cyan-400">
-              Controle de acesso
+              Silo Departamental
             </span>
             <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1 text-xs font-black uppercase tracking-widest text-emerald-400">
-              {filteredUsers.length} de {users.length} usuários
+              {filteredUsers.length} de {users.length} visíveis
             </span>
           </div>
         </div>
@@ -96,7 +132,7 @@ export default function UsersListPage() {
         <div className="flex items-center gap-6">
           <div className="text-right">
             <span className="block text-4xl font-black leading-none text-emerald-400">{filteredUsers.length}</span>
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Filtrados</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Listados</span>
           </div>
 
           <button
@@ -124,16 +160,22 @@ export default function UsersListPage() {
         </div>
 
         {/* Filtro por Perfil (Role) */}
-        <div className="relative min-w-[200px]">
+        <div className="relative min-w-[240px]">
           <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
           <select
             value={roleFilter}
             onChange={(e) => handleRoleChange(e.target.value)}
             className="w-full bg-[#0b1120] border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500/50 transition appearance-none cursor-pointer"
           >
-            <option value="">Todos os perfis</option>
+            <option value="">Filtrar cargo do departamento</option>
+            <option value="SUPER_ADMIN">SUPER ADMIN</option>
             <option value="ADMIN">ADMIN</option>
-            <option value="MANAGER">MANAGER</option>
+            <option value="ADMIN_INFRA">ADMIN INFRA</option>
+            <option value="MANAGER_INFRA">MANAGER INFRA</option>
+            <option value="ADMIN_DEV">ADMIN DEV</option>
+            <option value="MANAGER_DEV">MANAGER DEV</option>
+            <option value="ADMIN_DEVOPS">ADMIN DEVOPS</option>
+            <option value="MANAGER_DEVOPS">MANAGER DEVOPS</option>
             <option value="USER">USER</option>
           </select>
         </div>
@@ -143,10 +185,10 @@ export default function UsersListPage() {
       <div className="flex-1 px-8 pt-6 pb-4 flex flex-col justify-between overflow-hidden">
         {filteredUsers.length === 0 ? (
           <div className="flex h-32 flex-1 items-center justify-center rounded-3xl border border-dashed border-slate-800 text-slate-500 font-medium">
-            Nenhum usuário correspondente aos filtros.
+            Nenhum usuário visível para seu escopo ou correspondente aos filtros.
           </div>
         ) : (
-          /* Mantém rigidamente 1 linha com no máximo 4 itens */
+          /* Grid mantido rigidamente em 1 linha com no máximo 4 itens */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 grid-rows-1 gap-6 items-stretch">
             {currentUsers.map((user) => (
               <UserCard

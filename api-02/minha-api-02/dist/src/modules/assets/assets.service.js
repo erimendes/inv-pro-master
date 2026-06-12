@@ -67,34 +67,54 @@ let AssetsService = class AssetsService {
                     serial: data.serial,
                     hostname: data.hostname,
                     apelido: data.apelido,
+                    descricao: data.descricao,
+                    tag: data.tag,
                     ipPrincipal: data.ipPrincipal,
                     sistemaOperacional: data.sistemaOperacional,
+                    versaoSO: data.versaoSO,
                     cpu: data.cpu,
+                    nucleosCPU: data.nucleosCPU,
+                    threadsCPU: data.threadsCPU,
                     ram: data.ram,
                     armazenamento: data.armazenamento,
+                    gpu: data.gpu,
+                    macAddress: data.macAddress,
                     status: data.status,
+                    powerState: data.powerState,
+                    criticidade: data.criticidade,
                     emUso: data.emUso,
-                    dataCompra: data.dataCompra,
+                    monitorado: data.monitorado,
+                    dataCompra: data.dataCompra ? new Date(data.dataCompra) : null,
+                    garantiaFim: data.garantiaFim ? new Date(data.garantiaFim) : null,
                     valor: data.valor,
-                    vmId: data.vmId,
+                    fornecedor: data.fornecedor,
                     observacoes: data.observacoes,
+                    isVirtualizado: data.isVirtualizado,
+                    hypervisor: data.hypervisor,
+                    vmId: data.vmId,
+                    cluster: data.cluster,
+                    datacenter: data.datacenter,
+                    glpiId: data.glpiId,
                     posicaoRack: data.posicaoRack,
                     tamanhoU: data.tamanhoU,
+                    ...(data.userId
+                        ? {
+                            user: {
+                                connect: { id: data.userId },
+                            },
+                        }
+                        : {}),
                     ...(data.rackId
                         ? {
                             rack: {
-                                connect: {
-                                    id: data.rackId,
-                                },
+                                connect: { id: data.rackId },
                             },
                         }
                         : {}),
                     ...(data.hostFisicoId
                         ? {
                             host: {
-                                connect: {
-                                    id: data.hostFisicoId,
-                                },
+                                connect: { id: data.hostFisicoId },
                             },
                         }
                         : {}),
@@ -111,12 +131,10 @@ let AssetsService = class AssetsService {
         }
     }
     async findAll(tipo) {
+        const tipoFiltro = tipo && tipo !== 'TODOS' && tipo !== 'undefined' ? tipo : undefined;
         return await this.prisma.ativo.findMany({
             where: {
-                tipo: tipo &&
-                    tipo !== 'TODOS'
-                    ? tipo
-                    : undefined,
+                tipo: tipoFiltro,
             },
             orderBy: {
                 hostname: 'asc',
@@ -226,17 +244,10 @@ let AssetsService = class AssetsService {
     }
     async update(id, data) {
         const currentAsset = await this.findOne(id);
-        const tipoFinal = data.tipo ||
-            currentAsset.tipo;
-        const rackIdFinal = data.rackId !== undefined
-            ? data.rackId
-            : currentAsset.rackId;
-        const posicaoRackFinal = data.posicaoRack !== undefined
-            ? data.posicaoRack
-            : currentAsset.posicaoRack;
-        const hostFisicoIdFinal = data.hostFisicoId !== undefined
-            ? data.hostFisicoId
-            : currentAsset.hostFisicoId;
+        const tipoFinal = data.tipo || currentAsset.tipo;
+        const rackIdFinal = data.rackId !== undefined ? data.rackId : currentAsset.rackId;
+        const posicaoRackFinal = data.posicaoRack !== undefined ? data.posicaoRack : currentAsset.posicaoRack;
+        const hostFisicoIdFinal = data.hostFisicoId !== undefined ? data.hostFisicoId : currentAsset.hostFisicoId;
         await this.validateAssetRules(tipoFinal, rackIdFinal, posicaoRackFinal, hostFisicoIdFinal, id);
         try {
             return await this.prisma.ativo.update({
@@ -250,41 +261,49 @@ let AssetsService = class AssetsService {
                     serial: data.serial,
                     hostname: data.hostname,
                     apelido: data.apelido,
+                    descricao: data.descricao,
+                    tag: data.tag,
                     ipPrincipal: data.ipPrincipal,
                     sistemaOperacional: data.sistemaOperacional,
+                    versaoSO: data.versaoSO,
                     cpu: data.cpu,
+                    nucleosCPU: data.nucleosCPU,
+                    threadsCPU: data.threadsCPU,
                     ram: data.ram,
                     armazenamento: data.armazenamento,
+                    gpu: data.gpu,
+                    macAddress: data.macAddress,
                     status: data.status,
+                    powerState: data.powerState,
+                    criticidade: data.criticidade,
                     emUso: data.emUso,
-                    dataCompra: data.dataCompra,
+                    monitorado: data.monitorado,
+                    dataCompra: data.dataCompra ? new Date(data.dataCompra) : undefined,
+                    garantiaFim: data.garantiaFim ? new Date(data.garantiaFim) : undefined,
                     valor: data.valor,
-                    vmId: data.vmId,
+                    fornecedor: data.fornecedor,
                     observacoes: data.observacoes,
-                    posicaoRack: data.posicaoRack != null
-                        ? Number(data.posicaoRack)
-                        : null,
-                    tamanhoU: data.tamanhoU != null
-                        ? Number(data.tamanhoU)
-                        : null,
-                    rack: data.rackId
-                        ? {
-                            connect: {
-                                id: data.rackId,
-                            },
-                        }
-                        : {
-                            disconnect: true,
-                        },
-                    host: data.hostFisicoId
-                        ? {
-                            connect: {
-                                id: data.hostFisicoId,
-                            },
-                        }
-                        : {
-                            disconnect: true,
-                        },
+                    isVirtualizado: data.isVirtualizado,
+                    hypervisor: data.hypervisor,
+                    vmId: data.vmId,
+                    cluster: data.cluster,
+                    datacenter: data.datacenter,
+                    glpiId: data.glpiId,
+                    posicaoRack: data.posicaoRack !== undefined
+                        ? (data.posicaoRack != null ? Number(data.posicaoRack) : null)
+                        : undefined,
+                    tamanhoU: data.tamanhoU !== undefined
+                        ? (data.tamanhoU != null ? Number(data.tamanhoU) : null)
+                        : undefined,
+                    user: data.userId !== undefined
+                        ? (data.userId ? { connect: { id: data.userId } } : { disconnect: true })
+                        : undefined,
+                    rack: data.rackId !== undefined
+                        ? (data.rackId ? { connect: { id: data.rackId } } : { disconnect: true })
+                        : undefined,
+                    host: data.hostFisicoId !== undefined
+                        ? (data.hostFisicoId ? { connect: { id: data.hostFisicoId } } : { disconnect: true })
+                        : undefined,
                 },
                 include: {
                     rack: true,
@@ -295,8 +314,7 @@ let AssetsService = class AssetsService {
         }
         catch (error) {
             console.error(error);
-            if (error instanceof common_1.BadRequestException ||
-                error instanceof common_1.NotFoundException) {
+            if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException) {
                 throw error;
             }
             throw new common_1.InternalServerErrorException('Erro interno ao atualizar ativo.');
@@ -334,9 +352,7 @@ let AssetsService = class AssetsService {
                 posicaoRack: data.posicaoRack,
                 rack: data.rackId
                     ? {
-                        connect: {
-                            id: data.rackId,
-                        },
+                        connect: { id: data.rackId },
                     }
                     : {
                         disconnect: true,

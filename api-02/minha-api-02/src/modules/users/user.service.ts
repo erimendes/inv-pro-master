@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -12,9 +13,9 @@ import * as argon2 from 'argon2';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  // 🔄 CORREÇÃO: Removido o "readonly" da injeção se necessário, mantendo o padrão do resto do app
+  constructor(private prisma: PrismaService) {}
 
-  // Centraliza a seleção padrão para evitar repetição de código (DRY)
   private readonly userSelect = {
     id: true,
     username: true,
@@ -38,7 +39,8 @@ export class UserService {
       hashedPassword = await argon2.hash(data.password);
     }
 
-    return this.prisma.client.user.create({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user" (sem o .client)
+    return this.prisma.user.create({
       data: {
         username: data.username,
         email: data.email,
@@ -53,14 +55,16 @@ export class UserService {
   }
 
   async findAll() {
-    return this.prisma.client.user.findMany({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
+    return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: this.userSelect,
     });
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.client.user.findUnique({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: this.userSelect,
     });
@@ -72,7 +76,8 @@ export class UserService {
   }
 
   async findByEmailOrUsername(identifier: string) {
-    return this.prisma.client.user.findFirst({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
+    return this.prisma.user.findFirst({
       where: {
         OR: [
           { email: identifier },
@@ -83,41 +88,76 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUserDto) {
+    // 1. Busca o usuário atual usando o método corrigido
     const user = await this.findOne(id);
 
-    if (data.email && data.email !== user.email) {
-      const emailExists = await this.prisma.client.user.findUnique({
-        where: { email: data.email },
+    const updateData: any = {};
+    const inputData = data as any;
+
+    // 2. Filtra o e-mail se ele mudou de fato
+    if (inputData.email && inputData.email !== user.email) {
+      const emailExists = await this.prisma.user.findUnique({
+        where: { email: inputData.email },
       });
       if (emailExists) {
         throw new ConflictException('E-mail já está em uso');
       }
+      updateData.email = inputData.email;
     }
 
+    // 3. Filtra o username se ele mudou de fato
+    if (inputData.username && inputData.username !== user.username) {
+      const usernameExists = await this.prisma.user.findUnique({
+        where: { username: inputData.username },
+      });
+      if (usernameExists) {
+        throw new ConflictException('Username já está em uso');
+      }
+      updateData.username = inputData.username;
+    }
+
+    // 4. Copia os outros campos comuns opcionais
+    if (inputData.name) updateData.name = inputData.name;
+    if (inputData.role) updateData.role = inputData.role;
+    if (inputData.ativo !== undefined) updateData.ativo = inputData.ativo;
+
+    // 5. Criptografa a nova senha se informada
     if (data.password) {
-      data.password = await argon2.hash(data.password);
+      updateData.password = await argon2.hash(String(data.password));
     }
 
-    return this.prisma.client.user.update({
-      where: { id },
-      data,
-      select: this.userSelect,
-    });
+    // Se nada mudou, retorna o usuário do findOne direto para poupar query
+    if (Object.keys(updateData).length === 0) {
+      return user;
+    }
+
+    try {
+      // 🔄 CORREÇÃO: Atualização direta usando a instância limpa do Prisma
+      return await this.prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: this.userSelect,
+      });
+    } catch (error) {
+      console.error('Erro no update de usuário:', error);
+      throw new InternalServerErrorException('Erro interno ao salvar alterações do usuário.');
+    }
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Garante que lança 404 se não existir
+    await this.findOne(id);
 
-    await this.prisma.client.user.delete({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
+    await this.prisma.user.delete({
       where: { id },
     });
 
     return { message: 'Usuário removido com sucesso' };
   }
 
-  // Método auxiliar reutilizável para validação de duplicidade
   async validateUniqueFields(username: string, email: string) {
-    const userExists = await this.prisma.client.user.findFirst({
+    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
+    const userExists = await this.prisma.user.findFirst({
       where: {
         OR: [{ email }, { username }],
       },

@@ -1,16 +1,15 @@
-// src/app/pages/AssetsListPage.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { assetsService } from '../services/assets.service';
-import type { Asset, AssetTipo } from '../types/asset.types'; // 💡 Importando seu tipo real
+import type { Asset, AssetTipo } from '../types/asset.types'; 
 import { useNotification } from '../../../app/providers/NotificationProvider';
 import { AssetRow } from '../components/AssetRow';
+import { useAuth } from '../../../modules/auth/context/AuthContext';
+import { canModifyModule } from '../../../shared/constants/roles'; // 🔄 Importa o verificador do Mapa
 
-// Criamos uma união para o estado do filtro (Tipos reais + a opção 'TODOS')
 type FilterTipo = AssetTipo | 'TODOS';
 
-// Array para iterar no menu lateral baseado estritamente nas suas strings de tipo
 const LISTA_TIPOS: FilterTipo[] = [
   'TODOS',
   'LAPTOP',
@@ -36,10 +35,18 @@ export default function AssetsListPage() {
 
   const { notify } = useNotification();
   const navigate = useNavigate();
+  
+  // 🔄 Consulta o Mapa de Permissão para o módulo 'assets'
+  const { user } = useAuth();
+  const canCreateAsset = canModifyModule(user?.role, 'assets');
 
   useEffect(() => {
     loadAssets();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedTipo]);
 
   async function loadAssets() {
     try {
@@ -54,11 +61,19 @@ export default function AssetsListPage() {
     }
   }
 
-  async function handleDelete(id: number) {
+  // 🔄 ALTERAÇÃO: Aceita 'number | string' para alinhar perfeitamente com o componente filho
+  async function handleDelete(id: number | string) {
     if (!confirm('Deseja remover este ativo?')) return;
     try {
-      await assetsService.remove(String(id));
-      setAssets((prev) => prev.filter((asset) => asset.id !== id));
+      
+      // 💡 Se o seu assetsService exigir estritamente string, usamos String(id).
+      // Se ele aceitar o tipo original, passamos apenas 'id'.
+      // Vamos usar o formato que o seu service espera:
+      await assetsService.remove(id as any); 
+  
+      // Atualiza o estado local removendo o ativo da tela de forma segura (compara como string ou número)
+      setAssets((prev) => prev.filter((asset) => String(asset.id) !== String(id)));
+      
       notify('Ativo removido com sucesso!', 'success');
     } catch (err) {
       console.error(err);
@@ -67,7 +82,6 @@ export default function AssetsListPage() {
   }
 
   const filteredAssets = useMemo(() => {
-    setCurrentPage(1); 
     return assets.filter((a) => {
       const hostname = (a.hostname ?? '').toLowerCase();
       const fabricante = (a.fabricante ?? '').toLowerCase();
@@ -85,6 +99,7 @@ export default function AssetsListPage() {
 
   const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  
   const paginatedAssets = useMemo(() => {
     return filteredAssets.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAssets, startIndex]);
@@ -94,7 +109,7 @@ export default function AssetsListPage() {
 
   return (
     <div className="flex flex-col xl:flex-row gap-6 p-6">
-      {/* MENU LATERAL */}
+      {/* MENU LATERAL DE FILTROS */}
       <aside className="xl:w-72 rounded-3xl border border-white/5 bg-slate-900/60 p-6 h-fit">
         <h2 className="mb-6 text-2xl font-black text-white">Tipos</h2>
         <div className="space-y-2">
@@ -123,12 +138,16 @@ export default function AssetsListPage() {
               <h1 className="text-4xl font-black text-white">Ativos</h1>
               <p className="mt-2 text-slate-400">Gestão da infraestrutura de TI</p>
             </div>
-            <button
-              onClick={() => navigate('/assets/new')}
-              className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/20 px-5 py-3 font-bold text-cyan-400 transition hover:bg-cyan-500/30"
-            >
-              <Plus size={18} /> Novo Ativo
-            </button>
+            
+            {/* 🎯 BOTÃO CONDICIONAL: Desativado automaticamente se o mapa negar privilégios de escrita */}
+            {canCreateAsset && (
+              <button
+                onClick={() => navigate('/assets/new')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/20 px-5 py-3 font-bold text-cyan-400 transition hover:bg-cyan-500/30"
+              >
+                <Plus size={18} /> Novo Ativo
+              </button>
+            )}
           </div>
 
           {/* BUSCA */}
@@ -155,6 +174,7 @@ export default function AssetsListPage() {
                   onToggle={() => setSelectedAssetId(selectedAssetId === asset.id ? null : asset.id)}
                   onNavigate={navigate}
                   onDelete={handleDelete}
+                  userRole={user?.role} // 🔄 Passando a role dinâmica do usuário ativo
                 />
               ))
             )}

@@ -15,11 +15,51 @@ interface AuthenticatedRequest extends Request {
 export declare class UserController {
     private readonly service;
     constructor(service: UserService);
-    updateMe(req: AuthenticatedRequest, body: UpdateUserDto): Promise<any>;
-    create(body: CreateUserDto): Promise<any>;
-    findAll(): Promise<any>;
-    findOne(id: string): Promise<any>;
-    update(id: string, body: UpdateUserDto): Promise<any>;
+    updateMe(req: AuthenticatedRequest, body: UpdateUserDto): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: Role;
+    }>;
+    create(body: CreateUserDto): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: Role;
+    }>;
+    findAll(): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: Role;
+    }[]>;
+    findOne(id: string): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: Role;
+    }>;
+    update(id: string, body: UpdateUserDto): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: Role;
+    }>;
     remove(id: string): Promise<{
         message: string;
     }>;

@@ -663,10 +663,10 @@ export default function AssetFormPage() {
             <Grid>
               <Input
                 label="IP Rede"
-                value={form.ipRede}
+                value={form.ipPrincipal}
                 onChange={(v) =>
                   updateField(
-                    'ipRede',
+                    'ipPrincipal',
                     v,
                   )
                 }

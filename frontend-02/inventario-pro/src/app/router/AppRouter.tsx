@@ -11,16 +11,23 @@ import AuthLayout from '../layouts/AuthLayout';
 import RequireAuth from '../../modules/auth/guards/RequireAuth';
 
 import homeRoutes from '../../modules/home/routes/home.routes';
-
 import { authRoutes } from '../../modules/auth/routes/auth.routes';
-
 import { assetsRoutes } from '../../modules/assets/routes/assets.routes';
-
 import { racksRoutes } from '../../modules/racks/routes/racks.routes';
-
 import { applicationsRoutes } from '../../modules/applications/routes/applications.routes';
-
 import { usersRoutes } from '../../modules/users/routes/users.routes';
+
+// 🔄 Centralizamos as roles que podem acessar as áreas administrativas
+const ADMIN_AND_MANAGERS = [
+  'ADMIN',
+  'SUPER_ADMIN',
+  'ADMIN_INFRA',
+  'ADMIN_DEV',
+  'ADMIN_DEVOPS',
+  'MANAGER_INFRA',
+  'MANAGER_DEV',
+  'MANAGER_DEVOPS'
+];
 
 export default function AppRouter() {
   return (
@@ -99,15 +106,14 @@ export default function AppRouter() {
             </Route>
 
             {/* ===================================== */}
-            {/* ADMIN ONLY */}
+            {/* INFRASTRUCTURE & ADMINISTRATIVE PAGES */}
             {/* ===================================== */}
 
             <Route
               element={
                 <RequireAuth
-                  allowedRoles={[
-                    'ADMIN',
-                  ]}
+                  // 🔄 CORREÇÃO CRÍTICA: Agora permite que gestores e técnicos passem pela segurança da rota!
+                  allowedRoles={ADMIN_AND_MANAGERS}
                 />
               }
             >

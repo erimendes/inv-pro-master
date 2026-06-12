@@ -1,7 +1,6 @@
-// src/shared/components/header/Navbar.tsx
-
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../../modules/auth/context/AuthContext';
+import { canViewModule } from '../../constants/roles'; // 🔄 Importa o validador dinâmico do mapa
 
 import {
   LayoutDashboard,
@@ -12,54 +11,52 @@ import {
 } from 'lucide-react';
 
 // =========================
-// LINKS
+// CONFIGURAÇÃO DOS LINKS E SEUS MÓDULOS CORRESPONDENTES
 // =========================
-
 const links = [
   {
     to: '/',
     label: 'Dashboard',
     icon: LayoutDashboard,
     color: 'cyan',
+    module: 'dashboard' as const, // 🎯 Mapeia qual módulo do PERMISSION_MAP protege este link
   },
-
   {
     to: '/racks',
     label: 'Racks',
     icon: Database,
     color: 'cyan',
+    module: 'racks' as const,
   },
-
   {
     to: '/assets',
     label: 'Ativos',
     icon: Server,
     color: 'emerald',
+    module: 'assets' as const,
   },
-
   {
     to: '/applications',
     label: 'Aplicações',
     icon: Boxes,
     color: 'violet',
+    module: 'applications' as const,
   },
-
   {
     to: '/users',
     label: 'Usuários',
     icon: Users,
     color: 'orange',
+    module: 'users' as const,
   },
 ];
 
 // =========================
-// COLORS
+// ESTILOS DE CORES (GLOWS & HOVERS)
 // =========================
-
 const colors: any = {
   cyan: {
-    active:
-      `
+    active: `
       bg-cyan-500/15
       text-cyan-300
       border
@@ -67,18 +64,14 @@ const colors: any = {
       shadow-[0_0_25px_rgba(34,211,238,0.12)]
       backdrop-blur-xl
     `,
-
-    hover:
-      `
+    hover: `
       hover:bg-cyan-500/10
       hover:text-cyan-200
       hover:border-cyan-400/10
     `,
   },
-
   emerald: {
-    active:
-      `
+    active: `
       bg-emerald-500/15
       text-emerald-300
       border
@@ -86,18 +79,14 @@ const colors: any = {
       shadow-[0_0_25px_rgba(16,185,129,0.12)]
       backdrop-blur-xl
     `,
-
-    hover:
-      `
+    hover: `
       hover:bg-emerald-500/10
       hover:text-emerald-200
       hover:border-emerald-400/10
     `,
   },
-
   violet: {
-    active:
-      `
+    active: `
       bg-violet-500/15
       text-violet-300
       border
@@ -105,18 +94,14 @@ const colors: any = {
       shadow-[0_0_25px_rgba(139,92,246,0.12)]
       backdrop-blur-xl
     `,
-
-    hover:
-      `
+    hover: `
       hover:bg-violet-500/10
       hover:text-violet-200
       hover:border-violet-400/10
     `,
   },
-
   orange: {
-    active:
-      `
+    active: `
       bg-orange-500/15
       text-orange-300
       border
@@ -124,9 +109,7 @@ const colors: any = {
       shadow-[0_0_25px_rgba(249,115,22,0.14)]
       backdrop-blur-xl
     `,
-
-    hover:
-      `
+    hover: `
       hover:bg-orange-500/10
       hover:text-orange-200
       hover:border-orange-400/10
@@ -138,15 +121,13 @@ export default function Navbar() {
   const { user } = useAuth();
 
   // =========================
-  // ROLE FILTER (Corrigido para ocultar se não for ADMIN)
+  // 🔄 FILTRO DE ROLE TOTALMENTE DINÂMICO
   // =========================
-
-  const visibleLinks =
-    user?.role !== 'ADMIN'
-      ? links.filter((link) =>
-          ['/', '/applications'].includes(link.to),
-        )
-      : links;
+  // Filtra o array de links consultando em tempo real se a role do usuário 
+  // tem permissão de leitura ('allowedRoles') para aquela tela específica no mapa central.
+  const visibleLinks = links.filter((link) => 
+    canViewModule(user?.role, link.module)
+  );
 
   return (
     <div className="flex items-center">
@@ -172,10 +153,7 @@ export default function Navbar() {
             <NavLink
               key={link.to}
               to={link.to}
-              className={({
-                isActive,
-              }) =>
-                `
+              className={({ isActive }) => `
                 group
                 relative
                 flex
@@ -190,17 +168,14 @@ export default function Navbar() {
                 duration-300
                 ${
                   isActive
-                    ? colors[
-                        link.color
-                      ].active
+                    ? colors[link.color].active
                     : `
                       border-transparent
                       text-slate-400
                       ${colors[link.color].hover}
                     `
                 }
-              `
-              }
+              `}
             >
               {/* glow hover */}
               <div
@@ -218,15 +193,6 @@ export default function Navbar() {
               />
 
               {/* icon */}
-              <div
-                className="
-                  relative
-                  z-10
-                  flex
-                  items-center
-                  justify-center
-                "
-              />
               <Icon
                 size={18}
                 className="

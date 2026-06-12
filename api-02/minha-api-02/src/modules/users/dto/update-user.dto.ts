@@ -1,20 +1,36 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+// src/modules/users/dto/update-user.dto.ts
+import { IsString, IsEmail, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserDto {
-  @ApiProperty({ example: 'joao.silva@exemplo.com', required: false })
-  @IsEmail()
+  @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail({}, { message: 'E-mail inválido' })
   email?: string;
 
-  @ApiProperty({ example: 'novaSenha123', required: false })
-  @IsString()
-  @MinLength(6)
+  // 🔄 CORREÇÃO: O username precisa estar aqui para o NestJS aceitá-lo!
+  @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   password?: string;
 
-  @ApiProperty({ example: 'João Silva Atualizado', required: false })
-  @IsString()
+  @ApiPropertyOptional()
   @IsOptional()
-  name?: string;
+  @IsString() // Ou ajuste para o seu Enum de Roles, se houver
+  role?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  ativo?: boolean;
 }

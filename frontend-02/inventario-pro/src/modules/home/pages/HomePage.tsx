@@ -1,3 +1,4 @@
+// src/modulos/home/pages/HomePage.tsx
 import { useEffect, useState } from 'react';
 
 import {
@@ -23,6 +24,8 @@ import {
   Legend,
 } from 'recharts';
 
+import { checkIsAdmin } from '../../../shared/constants/roles'; // 🔄 Importando o nosso helper de roles
+
 const API_URL = 'http://localhost:3000';
 
 type Rack = { id: string };
@@ -39,7 +42,13 @@ export default function HomePage() {
   const [chartData, setChartData] = useState<any[]>([]);
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = currentUser?.role === 'ADMIN';
+  
+  // 🎯 AGORA É DINÂMICO: Se for qualquer uma das funções administrativas da lista, ele é considerado "admin" aqui.
+  const isAdmin = checkIsAdmin(currentUser?.role);
+  
+  // Mantemos o controle estrito de exibição de usuários apenas para quem é ADMIN/SUPER_ADMIN puro se desejar,
+  // ou liberamos junto. No seu caso, vamos ler direto para compor os dados.
+  const canSeeUsersList = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
 
   async function apiFetch(endpoint: string) {
     try {
@@ -89,6 +98,8 @@ export default function HomePage() {
   async function loadDashboard() {
     try {
       setLoading(true);
+      
+      // Permitimos a busca se o usuário logado tiver acesso administrativo geral
       const [racksData, assetsData, applicationsData, usersData] = await Promise.all([
         apiFetch('/hardware/racks'),
         apiFetch('/hardware/assets'),
@@ -128,7 +139,7 @@ export default function HomePage() {
   }
 
   // ==========================================
-  // TELA PARA USUÁRIO COMUM (NÃO-ADMIN)
+  // TELA PARA USUÁRIO COMUM (NÃO-ADMINISTRATIVO)
   // ==========================================
   if (!isAdmin) {
     return (
@@ -142,7 +153,7 @@ export default function HomePage() {
               Olá, {currentUser?.name || 'Usuário'}!
             </h1>
             <p className="text-slate-400 mb-6 text-sm leading-relaxed">
-              Sua conta foi autenticada com sucesso, mas você não possui privilégios de <strong>Administrador</strong> para gerenciar a infraestrutura e visualizar as métricas globais do Datacenter.
+              Sua conta foi autenticada com sucesso, mas você não possui privilégios <strong>Administrativos</strong> para gerenciar a infraestrutura e visualizar as métricas globais do Datacenter.
             </p>
             <div className="text-xs text-slate-500 border-t border-white/5 pt-4">
               Caso necessite de permissões elevadas, entre em contato com o administrador do sistema.
@@ -154,11 +165,10 @@ export default function HomePage() {
   }
 
   // ==========================================
-  // TELA ORIGINAL PARA ADMINISTRADOR
+  // TELA AUTORIZADA (ADMINS, GESTORES, TECHS)
   // ==========================================
   return (
     <div className="flex min-h-screen bg-[#030712] text-white">
-      {/* CONTENT */}
       <main className="min-w-0 flex-1 overflow-hidden px-8 pt-4 pb-10">
         
         {/* TOPBAR */}
@@ -178,7 +188,7 @@ export default function HomePage() {
           <Kpi title="Racks" value={racks.length} icon={<Database />} color="cyan" />
           <Kpi title="Assets" value={assets.length} icon={<Server />} color="emerald" />
           <Kpi title="Aplicações" value={applications.length} icon={<Boxes />} color="violet" />
-          {isAdmin && <Kpi title="Usuários" value={users.length} icon={<Users />} color="orange" />}
+          <Kpi title="Usuários" value={users.length} icon={<Users />} color="orange" />
         </div>
 
         {/* GRID */}
@@ -209,7 +219,7 @@ export default function HomePage() {
                 <Line type="monotone" dataKey="racks" name="Racks" stroke="#06b6d4" strokeWidth={3} dot={false} />
                 <Line type="monotone" dataKey="assets" name="Assets" stroke="#22c55e" strokeWidth={3} dot={false} />
                 <Line type="monotone" dataKey="applications" name="Aplicações" stroke="#8b5cf6" strokeWidth={3} dot={false} />
-                {isAdmin && <Line type="monotone" dataKey="users" name="Usuários" stroke="#f97316" strokeWidth={3} dot={false} />}
+                <Line type="monotone" dataKey="users" name="Usuários" stroke="#f97316" strokeWidth={3} dot={false} />
               </LineChart>
             </div>
           </div>
@@ -222,7 +232,7 @@ export default function HomePage() {
             <div className="space-y-5">
               <Activity title={`${assets.length} assets carregados`} subtitle="Infraestrutura" color="emerald" />
               <Activity title={`${applications.length} aplicações`} subtitle="Sistemas" color="violet" />
-              {isAdmin && <Activity title={`${users.length} usuários`} subtitle="Controle de acesso" color="orange" />}
+              <Activity title={`${users.length} usuários`} subtitle="Controle de acesso" color="orange" />
               <Activity title={`${racks.length} racks`} subtitle="Datacenter" color="cyan" />
             </div>
           </div>
@@ -232,9 +242,7 @@ export default function HomePage() {
   );
 }
 
-// =====================================
-// SIDEBAR ICON
-// =====================================
+// Subcomponentes mantidos idênticos abaixo...
 function SidebarIcon({ icon, active }: any) {
   return (
     <button
@@ -247,9 +255,7 @@ function SidebarIcon({ icon, active }: any) {
   );
 }
 
-// =====================================
-// KPI
-// =====================================
+// KPI Component
 function Kpi({ title, value, icon, color }: any) {
   const colors: any = {
     cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-400' },
@@ -269,9 +275,7 @@ function Kpi({ title, value, icon, color }: any) {
   );
 }
 
-// =====================================
-// ACTIVITY
-// =====================================
+// Activity Component
 function Activity({ title, subtitle, color }: any) {
   const colors: any = {
     cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-400' },

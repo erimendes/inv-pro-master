@@ -1,9 +1,15 @@
 export declare const Role: {
     readonly USER: "USER";
+    readonly USER_INFRA: "USER_INFRA";
+    readonly USER_DEV: "USER_DEV";
     readonly ADMIN: "ADMIN";
     readonly SUPER_ADMIN: "SUPER_ADMIN";
-    readonly SUPER_USER: "SUPER_USER";
-    readonly MANAGER: "MANAGER";
+    readonly ADMIN_INFRA: "ADMIN_INFRA";
+    readonly ADMIN_DEV: "ADMIN_DEV";
+    readonly ADMIN_DEVOPS: "ADMIN_DEVOPS";
+    readonly MANAGER_INFRA: "MANAGER_INFRA";
+    readonly MANAGER_DEV: "MANAGER_DEV";
+    readonly MANAGER_DEVOPS: "MANAGER_DEVOPS";
 };
 export type Role = (typeof Role)[keyof typeof Role];
 export declare const AtivoTipo: {

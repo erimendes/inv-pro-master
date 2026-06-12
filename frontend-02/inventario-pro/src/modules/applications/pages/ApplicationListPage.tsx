@@ -7,11 +7,15 @@ import { Pagination } from '../components/Pagination';
 
 import { ApplicationCard, type Application } from '../components/ApplicationCard';
 import type { SistemaCategoria, Criticidade } from '../types/applications.types';
+import { canModifyModule } from '../../../shared/constants/roles'; // 🔄 Importa o validador dinâmico do mapa
 
 export const ApplicationList = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  
+  // 🎯 AGORA COM MAPA: Verifica dinamicamente se a role atual pode CRIAR/EDITAR/EXCLUIR aplicações
+  // (ADMIN, SUPER_ADMIN, ADMIN_DEV e ADMIN_DEVOPS retornarão true. MANAGER_INFRA retornará false)
+  const canModifyApps = canModifyModule(user?.role, 'applications');
 
   // Estados dos Filtros vindos da API
   const [apps, setApps] = useState<Application[]>([]);
@@ -19,7 +23,7 @@ export const ApplicationList = () => {
   const [selectedCategoria, setSelectedCategoria] = useState<SistemaCategoria | undefined>(undefined);
   const [selectedCriticidade, setSelectedCriticidade] = useState<Criticidade | undefined>(undefined);
   
-  // 🔍 Novo Estado: Filtro de busca textual (Nome/Descrição)
+  // Filtro de busca textual (Nome/Descrição)
   const [searchTerm, setSearchTerm] = useState<string>('');
   
   // Estados de Controle Interno
@@ -49,7 +53,7 @@ export const ApplicationList = () => {
     fetchApplications();
   }, [selectedCategoria, selectedCriticidade]);
 
-  // 🔍 Aplica o filtro de texto localmente antes de paginar
+  // Aplica o filtro de texto localmente antes de paginar
   const filteredApps = useMemo(() => {
     if (!searchTerm.trim()) return apps;
     
@@ -188,7 +192,9 @@ export const ApplicationList = () => {
                 <span className="block text-5xl font-black leading-none text-emerald-400">{filteredApps.length}</span>
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Sistemas</span>
               </div>
-              {isAdmin && (
+              
+              {/* 🔄 BOTÃO CONDICIONAL: Usa a nova regra de escrita baseada no mapa de privilégios */}
+              {canModifyApps && (
                 <button
                   onClick={() => navigate('/applications/new')}
                   className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-black text-slate-950 transition hover:scale-105 hover:bg-emerald-400"
@@ -199,7 +205,7 @@ export const ApplicationList = () => {
             </div>
           </div>
 
-          {/* 🔍 NOVO: BARRA DE PESQUISA TEXTUAL */}
+          {/* BARRA DE PESQUISA TEXTUAL */}
           <div className="mb-8 relative max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input
@@ -228,14 +234,16 @@ export const ApplicationList = () => {
             </div>
           ) : (
             <div>
-              {/* Grid travado em no máximo 3 colunas por linha */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 {paginatedApps.map((app) => (
                   <ApplicationCard
                     key={app.id}
                     app={app}
                     opened={selectedCard === app.id}
-                    isAdmin={isAdmin}
+                    
+                    // 🔄 IMPORTANTE: Envia o poder real de escrita modificado pelo mapa para o card filho
+                    isAdmin={canModifyApps} 
+                    
                     onSelect={() => setSelectedCard(selectedCard === app.id ? null : app.id)}
                     onNavigateDetails={(id) => navigate(`/applications/${id}`)}
                     onNavigateEdit={(id) => navigate(`/applications/edit/${id}`)}

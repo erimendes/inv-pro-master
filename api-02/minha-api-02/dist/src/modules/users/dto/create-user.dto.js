@@ -23,7 +23,7 @@ class CreateUserDto {
     authProvider;
     ativo;
     static _OPENAPI_METADATA_FACTORY() {
-        return { username: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: false, type: () => String, minLength: 6 }, name: { required: false, type: () => String }, role: { required: false, enum: ["USER", "ADMIN", "SUPER_ADMIN", "SUPER_USER", "MANAGER"] }, authProvider: { required: false, enum: ["LOCAL", "AD"] }, ativo: { required: false, type: () => Boolean } };
+        return { username: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: false, type: () => String, minLength: 6 }, name: { required: false, type: () => String }, role: { required: false, enum: ["USER", "USER_INFRA", "USER_DEV", "ADMIN", "SUPER_ADMIN", "ADMIN_INFRA", "ADMIN_DEV", "ADMIN_DEVOPS", "MANAGER_INFRA", "MANAGER_DEV", "MANAGER_DEVOPS"] }, authProvider: { required: false, enum: ["LOCAL", "AD"] }, ativo: { required: false, type: () => Boolean } };
     }
 }
 exports.CreateUserDto = CreateUserDto;

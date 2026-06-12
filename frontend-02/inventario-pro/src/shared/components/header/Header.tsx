@@ -3,10 +3,13 @@ import Navbar from './Navbar';
 import UserMenu from './UserMenu';
 
 import { useAuth } from '../../../modules/auth/context/AuthContext';
+import { checkIsAdmin } from '../../../shared/constants/roles'; // 🔄 Importando o nosso atalho do mapa central
 
 export default function Header() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  
+  // 🎯 AGORA É DINÂMICO: Retorna true para ADMIN, SUPER_ADMIN, ADMIN_INFRA, MANAGER_INFRA, etc.
+  const hasAdminAccess = checkIsAdmin(user?.role);
 
   return (
     <header
@@ -35,8 +38,8 @@ export default function Header() {
 
         <Logo />
 
-        {/* CORREÇÃO: Só mostra o menu superior se o usuário for ADMIN */}
-        {user && isAdmin && <Navbar />}
+        {/* 🔄 CORREÇÃO: Mostra o menu superior se o usuário tiver qualquer perfil administrativo liberado no mapa */}
+        {user && hasAdminAccess && <Navbar />}
 
         {/* Só mostra user menu se logado (Mantém a foto e botão Sair do usuário comum) */}
         {user ? (

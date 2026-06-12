@@ -86,7 +86,7 @@ let AuthService = class AuthService {
                 throw new common_1.UnauthorizedException('Credenciais inválidas.');
             }
             if (!user) {
-                user = await this.prisma.client.user.create({
+                user = await this.prisma.user.create({
                     data: {
                         username: adUsername,
                         email: String(adUser.mail || `${adUsername}@empresa.com`),
@@ -100,7 +100,7 @@ let AuthService = class AuthService {
                 });
             }
             else {
-                user = await this.prisma.client.user.update({
+                user = await this.prisma.user.update({
                     where: { id: user.id },
                     data: {
                         ultimoLogin: new Date(),
@@ -118,7 +118,7 @@ let AuthService = class AuthService {
             if (!isPasswordValid) {
                 throw new common_1.UnauthorizedException('Credenciais inválidas.');
             }
-            user = await this.prisma.client.user.update({
+            user = await this.prisma.user.update({
                 where: { id: user.id },
                 data: { ultimoLogin: new Date() },
             });
@@ -126,11 +126,14 @@ let AuthService = class AuthService {
         else {
             throw new common_1.UnauthorizedException('Provedor de autenticação inválido.');
         }
+        if (!user) {
+            throw new common_1.UnauthorizedException('Erro ao processar dados de autenticação do usuário.');
+        }
         const crypto = await import('crypto');
         const sessionId = crypto.randomUUID();
         const tokens = await this.generateTokens(user, sessionId);
         const hashedRt = await argon2.hash(tokens.refreshToken);
-        await this.prisma.client.session.create({
+        await this.prisma.session.create({
             data: {
                 id: sessionId,
                 userId: user.id,
@@ -155,18 +158,18 @@ let AuthService = class AuthService {
             const payload = await this.jwt.verifyAsync(refreshToken, {
                 secret: process.env.JWT_SECRET,
             });
-            const sessions = await this.prisma.client.session.findMany({
+            const sessions = await this.prisma.session.findMany({
                 where: { userId: payload.sub, revoked: false },
             });
             for (const session of sessions) {
                 const isValid = await argon2.verify(session.refreshToken, refreshToken);
                 if (isValid) {
-                    const user = await this.prisma.client.user.findUnique({
+                    const user = await this.prisma.user.findUnique({
                         where: { id: payload.sub },
                     });
                     if (!user || !user.ativo)
                         throw new common_1.UnauthorizedException();
-                    await this.prisma.client.session.update({
+                    await this.prisma.session.update({
                         where: { id: session.id },
                         data: { revoked: true },
                     });
@@ -174,7 +177,7 @@ let AuthService = class AuthService {
                     const newSessionId = crypto.randomUUID();
                     const tokens = await this.generateTokens(user, newSessionId);
                     const hashedRt = await argon2.hash(tokens.refreshToken);
-                    await this.prisma.client.session.create({
+                    await this.prisma.session.create({
                         data: {
                             id: newSessionId,
                             userId: user.id,
@@ -192,14 +195,14 @@ let AuthService = class AuthService {
         }
     }
     async logout(sessionId) {
-        await this.prisma.client.session.update({
+        await this.prisma.session.update({
             where: { id: sessionId },
             data: { revoked: true },
         });
         return { message: 'Logout realizado com sucesso' };
     }
     async logoutAll(userId) {
-        await this.prisma.client.session.updateMany({
+        await this.prisma.session.updateMany({
             where: { userId, revoked: false },
             data: { revoked: true },
         });

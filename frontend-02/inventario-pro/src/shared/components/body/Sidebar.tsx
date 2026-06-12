@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../modules/auth/context/AuthContext';
+import { canViewModule } from '../../constants/roles'; // 🔄 Importa a validação dinâmica por módulo
+
 import { 
   LayoutDashboard, 
   Server, 
@@ -17,20 +19,21 @@ export default function Sidebar() {
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // 🎯 MAPEAMENTO: Adicionada a chave 'module' para bater certinho com o PERMISSION_MAP
   const allMenuItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'Racks', path: '/racks', icon: <Server size={20} /> },
-    { label: 'Ativos', path: '/assets', icon: <Laptop size={20} /> },
-    { label: 'Aplicações', path: '/applications', icon: <Layers3 size={20} /> },
-    { label: 'Usuários', path: '/users', icon: <Users size={20} /> },
+    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, module: 'dashboard' as const },
+    { label: 'Racks', path: '/racks', icon: <Server size={20} />, module: 'racks' as const },
+    { label: 'Ativos', path: '/assets', icon: <Laptop size={20} />, module: 'assets' as const },
+    { label: 'Aplicações', path: '/applications', icon: <Layers3 size={20} />, module: 'applications' as const },
+    { label: 'Usuários', path: '/users', icon: <Users size={20} />, module: 'users' as const },
   ];
 
   // ==========================================
-  // FILTRO DO MENU LATERAL POR CARGO
+  // 🔄 FILTRO DO MENU LATERAL TOTALMENTE DINÂMICO
   // ==========================================
-  const menuItems = user?.role !== 'ADMIN'
-    ? allMenuItems.filter(item => ['/dashboard', '/applications'].includes(item.path))
-    : allMenuItems;
+  const menuItems = useMemo(() => {
+    return allMenuItems.filter(item => canViewModule(user?.role, item.module));
+  }, [user?.role]);
 
   return (
     <div className="relative sticky top-20 z-40 shrink-0 h-[calc(100vh-80px)]">
@@ -56,6 +59,7 @@ export default function Sidebar() {
         <nav className="flex-1">
           <ul className="flex flex-col gap-2 w-full list-none m-0 p-0">
             {menuItems.map((item) => {
+              // Verifica se a rota bate com o caminho ou se é o fallback da home '/' para o dashboard
               const isActive = location.pathname.startsWith(item.path) || (item.path === '/dashboard' && location.pathname === '/');
 
               return (

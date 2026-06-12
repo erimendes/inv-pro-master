@@ -97,9 +97,7 @@ export class AssetsService {
   }
 
   async create(data: CreateAssetDto) {
-
-    const tipoAtivo =
-      data.tipo as AtivoTipo;
+    const tipoAtivo = data.tipo as AtivoTipo;
 
     await this.validateAssetRules(
       tipoAtivo,
@@ -109,52 +107,60 @@ export class AssetsService {
     );
 
     try {
-
       return await this.prisma.ativo.create({
         data: {
           patrimonio: data.patrimonio,
           tipo: tipoAtivo,
-
           fabricante: data.fabricante,
           hardware: data.hardware,
           modelo: data.modelo,
           serial: data.serial,
-
           hostname: data.hostname,
           apelido: data.apelido,
+          descricao: data.descricao,
+          tag: data.tag,
           ipPrincipal: data.ipPrincipal,
-
           sistemaOperacional: data.sistemaOperacional,
-
+          versaoSO: data.versaoSO,
           cpu: data.cpu,
+          nucleosCPU: data.nucleosCPU,
+          threadsCPU: data.threadsCPU,
           ram: data.ram,
           armazenamento: data.armazenamento,
-
-          status:
-            data.status as AtivoStatus,
-
+          gpu: data.gpu,
+          macAddress: data.macAddress,
+          status: data.status as AtivoStatus,
+          powerState: data.powerState,
+          criticidade: data.criticidade,
           emUso: data.emUso,
-
-          dataCompra: data.dataCompra,
+          monitorado: data.monitorado,
+          dataCompra: data.dataCompra ? new Date(data.dataCompra) : null,
+          garantiaFim: data.garantiaFim ? new Date(data.garantiaFim) : null,
           valor: data.valor,
-
+          fornecedor: data.fornecedor,
+          observacoes: data.observacoes,
+          isVirtualizado: data.isVirtualizado,
+          hypervisor: data.hypervisor,
           vmId: data.vmId,
+          cluster: data.cluster,
+          datacenter: data.datacenter,
+          glpiId: data.glpiId,
+          posicaoRack: data.posicaoRack,
+          tamanhoU: data.tamanhoU,
 
-          observacoes:
-            data.observacoes,
-
-          posicaoRack:
-            data.posicaoRack,
-
-          tamanhoU:
-            data.tamanhoU,
+          // 🔄 CORREÇÃO TS2322 (XOR): Relacionamentos mapeados via objetos 'connect' nativos
+          ...(data.userId
+            ? {
+                user: {
+                  connect: { id: data.userId },
+                },
+              }
+            : {}),
 
           ...(data.rackId
             ? {
                 rack: {
-                  connect: {
-                    id: data.rackId,
-                  },
+                  connect: { id: data.rackId },
                 },
               }
             : {}),
@@ -162,39 +168,28 @@ export class AssetsService {
           ...(data.hostFisicoId
             ? {
                 host: {
-                  connect: {
-                    id: data.hostFisicoId,
-                  },
+                  connect: { id: data.hostFisicoId },
                 },
               }
             : {}),
         },
-
         include: {
           rack: true,
           host: true,
         },
       });
-
     } catch (error) {
-
       console.error(error);
-
-      throw new InternalServerErrorException(
-        'Erro interno ao criar ativo.',
-      );
+      throw new InternalServerErrorException('Erro interno ao criar ativo.');
     }
   }
 
   async findAll(tipo?: string) {
+    const tipoFiltro = tipo && tipo !== 'TODOS' && tipo !== 'undefined' ? (tipo as AtivoTipo) : undefined;
 
     return await this.prisma.ativo.findMany({
       where: {
-        tipo:
-          tipo &&
-          tipo !== 'TODOS'
-            ? (tipo as AtivoTipo)
-            : undefined,
+        tipo: tipoFiltro,
       },
 
       orderBy: {
@@ -232,9 +227,7 @@ export class AssetsService {
   }
 
   async findAvailable() {
-
     try {
-
       return await this.prisma.ativo.findMany({
         where: {
           rackId: null,
@@ -250,9 +243,7 @@ export class AssetsService {
       });
 
     } catch (error) {
-
       console.error(error);
-
       throw new InternalServerErrorException(
         'Erro ao acessar tabela de ativos.',
       );
@@ -260,62 +251,57 @@ export class AssetsService {
   }
 
   async findOne(id: number) {
-
-    const asset =
-      await this.prisma.ativo.findUnique({
-
-        where: { id },
-
-        include: {
-          rack: true,
-          host: {
-            select: {
-              id: true,
-              hostname: true,
-              patrimonio: true,
-              ipPrincipal: true,
-              sistemaOperacional: true,
-            },
-          },
-          vms: {
-            orderBy: {
-              hostname: 'asc',
-            },
-            select: {
-              id: true,
-              patrimonio: true,
-              hostname: true,
-              apelido: true,
-              ipPrincipal: true,
-              sistemaOperacional: true,
-              cpu: true,
-              ram: true,
-              armazenamento: true,
-              status: true,
-              emUso: true,
-            },
-          },
-          aplicacoes: {
-            select: {
-              id: true,
-              nome: true,
-              sigla: true,
-              criticidade: true,
-            },
-          },
-          configsRede: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+    const asset = await this.prisma.ativo.findUnique({
+      where: { id },
+      include: {
+        rack: true,
+        host: {
+          select: {
+            id: true,
+            hostname: true,
+            patrimonio: true,
+            ipPrincipal: true,
+            sistemaOperacional: true,
           },
         },
-      });
+        vms: {
+          orderBy: {
+            hostname: 'asc',
+          },
+          select: {
+            id: true,
+            patrimonio: true,
+            hostname: true,
+            apelido: true,
+            ipPrincipal: true,
+            sistemaOperacional: true,
+            cpu: true,
+            ram: true,
+            armazenamento: true,
+            status: true,
+            emUso: true,
+          },
+        },
+        aplicacoes: {
+          select: {
+            id: true,
+            nome: true,
+            sigla: true,
+            criticidade: true,
+          },
+        },
+        configsRede: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     if (!asset) {
-
       throw new NotFoundException(
         `Ativo #${id} nao encontrado`,
       );
@@ -324,32 +310,13 @@ export class AssetsService {
     return asset;
   }
 
-  async update(
-    id: number,
-    data: UpdateAssetDto,
-  ) {
+  async update(id: number, data: UpdateAssetDto) {
+    const currentAsset = await this.findOne(id);
 
-    const currentAsset =
-      await this.findOne(id);
-
-    const tipoFinal =
-      (data.tipo as AtivoTipo) ||
-      currentAsset.tipo;
-
-    const rackIdFinal =
-      data.rackId !== undefined
-        ? data.rackId
-        : currentAsset.rackId;
-
-    const posicaoRackFinal =
-      data.posicaoRack !== undefined
-        ? data.posicaoRack
-        : currentAsset.posicaoRack;
-
-    const hostFisicoIdFinal =
-      data.hostFisicoId !== undefined
-        ? data.hostFisicoId
-        : currentAsset.hostFisicoId;
+    const tipoFinal = (data.tipo as AtivoTipo) || currentAsset.tipo;
+    const rackIdFinal = data.rackId !== undefined ? data.rackId : currentAsset.rackId;
+    const posicaoRackFinal = data.posicaoRack !== undefined ? data.posicaoRack : currentAsset.posicaoRack;
+    const hostFisicoIdFinal = data.hostFisicoId !== undefined ? data.hostFisicoId : currentAsset.hostFisicoId;
 
     await this.validateAssetRules(
       tipoFinal,
@@ -360,10 +327,8 @@ export class AssetsService {
     );
 
     try {
-
       return await this.prisma.ativo.update({
         where: { id },
-
         data: {
           patrimonio: data.patrimonio,
           tipo: tipoFinal,
@@ -373,87 +338,78 @@ export class AssetsService {
           serial: data.serial,
           hostname: data.hostname,
           apelido: data.apelido,
+          descricao: data.descricao,
+          tag: data.tag,
           ipPrincipal: data.ipPrincipal,
           sistemaOperacional: data.sistemaOperacional,
+          versaoSO: data.versaoSO,
           cpu: data.cpu,
+          nucleosCPU: data.nucleosCPU,
+          threadsCPU: data.threadsCPU,
           ram: data.ram,
           armazenamento: data.armazenamento,
+          gpu: data.gpu,
+          macAddress: data.macAddress,
           status: data.status as AtivoStatus,
+          powerState: data.powerState,
+          criticidade: data.criticidade,
           emUso: data.emUso,
-          dataCompra: data.dataCompra,
+          monitorado: data.monitorado,
+          dataCompra: data.dataCompra ? new Date(data.dataCompra) : undefined,
+          garantiaFim: data.garantiaFim ? new Date(data.garantiaFim) : undefined,
           valor: data.valor,
-          vmId: data.vmId,
+          fornecedor: data.fornecedor,
           observacoes: data.observacoes,
-          posicaoRack:
-            data.posicaoRack != null
-              ? Number(
-                  data.posicaoRack,
-                )
-              : null,
+          isVirtualizado: data.isVirtualizado,
+          hypervisor: data.hypervisor,
+          vmId: data.vmId,
+          cluster: data.cluster,
+          datacenter: data.datacenter,
+          glpiId: data.glpiId,
 
-          tamanhoU:
-            data.tamanhoU != null
-              ? Number(
-                  data.tamanhoU,
-                )
-              : null,
+          posicaoRack: data.posicaoRack !== undefined 
+            ? (data.posicaoRack != null ? Number(data.posicaoRack) : null)
+            : undefined,
 
-          rack:
-            data.rackId
-              ? {
-                  connect: {
-                    id: data.rackId,
-                  },
-                }
-              : {
-                  disconnect: true,
-                },
+          tamanhoU: data.tamanhoU !== undefined
+            ? (data.tamanhoU != null ? Number(data.tamanhoU) : null)
+            : undefined,
 
-          host:
-            data.hostFisicoId
-              ? {
-                  connect: {
-                    id: data.hostFisicoId,
-                  },
-                }
-              : {
-                  disconnect: true,
-                },
+          // 🔄 CORREÇÃO TS2322 (XOR): Acoplamento correto das conexões e desconexões
+          user: data.userId !== undefined
+            ? (data.userId ? { connect: { id: data.userId } } : { disconnect: true })
+            : undefined,
+
+          rack: data.rackId !== undefined
+            ? (data.rackId ? { connect: { id: data.rackId } } : { disconnect: true })
+            : undefined,
+
+          host: data.hostFisicoId !== undefined
+            ? (data.hostFisicoId ? { connect: { id: data.hostFisicoId } } : { disconnect: true })
+            : undefined,
         },
-
         include: {
           rack: true,
           host: true,
           vms: true,
         },
       });
-
     } catch (error) {
-
       console.error(error);
-
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-
-      throw new InternalServerErrorException(
-        'Erro interno ao atualizar ativo.',
-      );
+      throw new InternalServerErrorException('Erro interno ao atualizar ativo.');
     }
   }
 
   async remove(id: number) {
-
-    const asset =
-      await this.prisma.ativo.findUnique({
-        where: { id },
-        include: {
-          vms: true,
-        },
-      });
+    const asset = await this.prisma.ativo.findUnique({
+      where: { id },
+      include: {
+        vms: true,
+      },
+    });
 
     if (!asset) {
       throw new NotFoundException(
@@ -486,9 +442,7 @@ export class AssetsService {
       posicaoRack: number | null;
     },
   ) {
-
-    const currentAsset =
-      await this.findOne(id);
+    const currentAsset = await this.findOne(id);
 
     await this.validateAssetRules(
       currentAsset.tipo,
@@ -505,9 +459,7 @@ export class AssetsService {
         rack:
           data.rackId
             ? {
-                connect: {
-                  id: data.rackId,
-                },
+                connect: { id: data.rackId },
               }
             : {
                 disconnect: true,

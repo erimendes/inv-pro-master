@@ -3,10 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthProvider = exports.HypervisorTipo = exports.Criticidade = exports.SistemaCategoria = exports.PowerState = exports.AtivoStatus = exports.AtivoTipo = exports.Role = void 0;
 exports.Role = {
     USER: 'USER',
+    USER_INFRA: 'USER_INFRA',
+    USER_DEV: 'USER_DEV',
     ADMIN: 'ADMIN',
     SUPER_ADMIN: 'SUPER_ADMIN',
-    SUPER_USER: 'SUPER_USER',
-    MANAGER: 'MANAGER'
+    ADMIN_INFRA: 'ADMIN_INFRA',
+    ADMIN_DEV: 'ADMIN_DEV',
+    ADMIN_DEVOPS: 'ADMIN_DEVOPS',
+    MANAGER_INFRA: 'MANAGER_INFRA',
+    MANAGER_DEV: 'MANAGER_DEV',
+    MANAGER_DEVOPS: 'MANAGER_DEVOPS'
 };
 exports.AtivoTipo = {
     LAPTOP: 'LAPTOP',

@@ -13,14 +13,22 @@ interface CustomHttpRequest {
 export declare class AuthController {
     private readonly auth;
     constructor(auth: AuthService);
-    register(dto: CreateUserDto): Promise<any>;
+    register(dto: CreateUserDto): Promise<{
+        name: string | null;
+        id: string;
+        createdAt: Date;
+        username: string;
+        email: string;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: import("../../../generated/prisma/enums").Role;
+    }>;
     login(body: LoginDto, req: CustomHttpRequest): Promise<{
-        id: any;
-        username: any;
-        name: any;
-        email: any;
-        role: any;
-        authProvider: any;
+        id: string;
+        username: string;
+        name: string | null;
+        email: string;
+        role: import("../../../generated/prisma/enums").Role;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
         accessToken: string;
         refreshToken: string;
     }>;
