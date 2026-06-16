@@ -12,6 +12,10 @@ import { AssetsModule } from './modules/assets/assets.module'
 import { RacksModule } from './modules/racks/racks.module'
 import { ApplicationsModule } from './modules/applications/applications.module';
 
+// 👇 1. ADICIONE ESSES DOIS IMPORTS AQUI
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,5 +34,8 @@ import { ApplicationsModule } from './modules/applications/applications.module';
     RacksModule,
     ApplicationsModule,
   ],
+  // 👇 2. ADICIONE O CONTROLLER E O PROVIDER AQUI EMBAIXO
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

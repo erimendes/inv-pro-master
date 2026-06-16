@@ -22,6 +22,8 @@ const user_module_1 = require("./modules/users/user.module");
 const assets_module_1 = require("./modules/assets/assets.module");
 const racks_module_1 = require("./modules/racks/racks.module");
 const applications_module_1 = require("./modules/applications/applications.module");
+const app_controller_1 = require("./app.controller");
+const app_service_1 = require("./app.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -43,6 +45,8 @@ exports.AppModule = AppModule = __decorate([
             racks_module_1.RacksModule,
             applications_module_1.ApplicationsModule,
         ],
+        controllers: [app_controller_1.AppController],
+        providers: [app_service_1.AppService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map
