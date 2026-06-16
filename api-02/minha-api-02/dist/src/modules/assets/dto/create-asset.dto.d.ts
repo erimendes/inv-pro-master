@@ -41,4 +41,5 @@ export declare class CreateAssetDto {
     posicaoRack?: number;
     tamanhoU?: number;
     glpiId?: number;
+    vmsIds?: number[];
 }

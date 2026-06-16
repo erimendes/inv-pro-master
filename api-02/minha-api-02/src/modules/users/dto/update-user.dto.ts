@@ -1,6 +1,6 @@
-// src/modules/users/dto/update-user.dto.ts
 import { IsString, IsEmail, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Role, AuthProvider } from '../../../../generated/prisma/client'; // 🔄 Adicionado AuthProvider aqui
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -13,7 +13,6 @@ export class UpdateUserDto {
   @IsEmail({}, { message: 'E-mail inválido' })
   email?: string;
 
-  // 🔄 CORREÇÃO: O username precisa estar aqui para o NestJS aceitá-lo!
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -26,8 +25,19 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString() // Ou ajuste para o seu Enum de Roles, se houver
-  role?: string;
+  @IsString()
+  departamento?: string;
+
+  @ApiPropertyOptional({ enum: Role })
+  @IsOptional()
+  @IsEnum(Role)
+  role?: Role;
+
+  // 🆕 CAMPO ADICIONADO: Permite atualizar o provedor de autenticação (LOCAL ou AD)
+  @ApiPropertyOptional({ enum: AuthProvider })
+  @IsOptional()
+  @IsEnum(AuthProvider)
+  authProvider?: AuthProvider;
 
   @ApiPropertyOptional()
   @IsOptional()

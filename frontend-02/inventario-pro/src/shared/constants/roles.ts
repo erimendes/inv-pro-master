@@ -11,16 +11,19 @@ export const PERMISSION_MAP: Record<SystemModules, { allowedRoles: string[]; wri
     writeRoles:   ['ADMIN', 'SUPER_ADMIN']
   },
   assets: {
-    allowedRoles: ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA', 'MANAGER_INFRA'], // 👁️ Ambos ENXERGAM a tela
-    writeRoles:   ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA'] // ✍️ Apenas ADMIN_INFRA (e globais) podem CRIAR, EDITAR e EXCLUIR
+    // Adicionado ADMIN_DEV e ADMIN_DEVOPS para poderem ver a tela de ativos
+    allowedRoles: ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA', 'MANAGER_INFRA', 'ADMIN_DEVOPS'], 
+    
+    // ✍️ Adicionado ADMIN_DEV e ADMIN_DEVOPS para liberarem os botões de Criar, Editar e Excluir
+    writeRoles:   ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA', 'ADMIN_DEVOPS'] 
   },
   racks: {
     allowedRoles: ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA', 'MANAGER_INFRA'], // 👁️ Ambos ENXERGAM a tela
     writeRoles:   ['ADMIN', 'SUPER_ADMIN', 'ADMIN_INFRA'] // ✍️ Apenas ADMIN_INFRA (e globais) podem editar racks
   },
   applications: {
-    allowedRoles: ['ADMIN', 'SUPER_ADMIN', 'USER', 'ADMIN_DEV', 'MANAGER_DEV', 'ADMIN_DEVOPS', 'MANAGER_DEVOPS'],
-    writeRoles:   ['ADMIN', 'SUPER_ADMIN', 'ADMIN_DEV', 'ADMIN_DEVOPS']
+    allowedRoles: ['ADMIN', 'ADMIN_INFRA', 'USER', 'ADMIN_DEV', 'MANAGER_DEV', 'ADMIN_DEVOPS', 'MANAGER_DEVOPS'],
+    writeRoles:   ['ADMIN', 'ADMIN_INFRA', 'ADMIN_DEV', 'ADMIN_DEVOPS']
   },
   users: {
     allowedRoles: ['ADMIN', 'SUPER_ADMIN'],

@@ -19,7 +19,7 @@ import {
 import {
   Criticidade,
   SistemaCategoria,
-} from '../../../generated/prisma/client';
+} from '../../../../generated/prisma/client';
 
 import { ApplicationsService } from '../services/applications.service';
 

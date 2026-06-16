@@ -1,9 +1,7 @@
-// src/app/components/assets/AssetRow.tsx
 import React from 'react';
 import { ChevronDown, ChevronUp, Eye, Pencil, Trash2, Monitor, Laptop, Server, Router, Network, HardDrive } from 'lucide-react';
 import type { Asset, AssetTipo } from '../types/asset.types';
 import { InfoCard } from './InfoCard';
-import { canModifyModule } from '../../../shared/constants/roles'; // 🔄 Importa o verificador do Mapa
 
 interface AssetRowProps {
   asset: Asset;
@@ -11,7 +9,7 @@ interface AssetRowProps {
   onToggle: () => void;
   onNavigate: (path: string) => void;
   onDelete: (id: number) => void;
-  userRole?: string;
+  isAdmin: boolean; // 🔄 Mudou de userRole? string para isAdmin: boolean
 }
 
 export const AssetRow: React.FC<AssetRowProps> = ({ 
@@ -20,11 +18,8 @@ export const AssetRow: React.FC<AssetRowProps> = ({
   onToggle, 
   onNavigate, 
   onDelete,
-  userRole 
+  isAdmin // 🔄 Captura a flag de permissão calculada pelo pai
 }) => {
-  
-  // 🎯 Verifica as permissões de modificação para o módulo de ativos
-  const canEditOrDelete = canModifyModule(userRole, 'assets');
 
   function getAssetIcon(tipo?: AssetTipo) {
     switch (tipo) {
@@ -88,7 +83,6 @@ export const AssetRow: React.FC<AssetRowProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {/* 👁️ Detalhes continua SEMPRE visível para quem entrou na tela */}
             <button
               onClick={() => onNavigate(`/assets/${asset.id}`)}
               className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/20 px-4 py-2 text-sm font-bold text-emerald-400 transition hover:bg-emerald-500/30"
@@ -96,8 +90,8 @@ export const AssetRow: React.FC<AssetRowProps> = ({
               <Eye size={16} /> Detalhes
             </button>
 
-            {/* 🔄 BOTÃO EDITAR (Exibido se canEditOrDelete for true) */}
-            {canEditOrDelete && (
+            {/* 🔄 Usa diretamente a prop isAdmin controlada pelo pai */}
+            {isAdmin && (
               <button
                 onClick={() => onNavigate(`/assets/${asset.id}/edit`)}
                 className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/20 px-4 py-2 text-sm font-bold text-blue-400 transition hover:bg-blue-500/30"
@@ -106,8 +100,8 @@ export const AssetRow: React.FC<AssetRowProps> = ({
               </button>
             )}
 
-            {/* 🔄 BOTÃO EXCLUIR (Exibido se canEditOrDelete for true) */}
-            {canEditOrDelete && (
+            {/* 🔄 Usa diretamente a prop isAdmin controlada pelo pai */}
+            {isAdmin && (
               <button
                 onClick={() => onDelete(asset.id)}
                 className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-bold text-red-400 transition hover:bg-red-500/30"

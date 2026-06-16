@@ -2,6 +2,5 @@
 import { CreateAssetDto } from './create-asset.dto';
 import { PartialType } from '@nestjs/mapped-types';
 
-export class UpdateAssetDto extends PartialType(
-  CreateAssetDto,
-) {}
+// Com o PartialType, todas as regras (incluindo o vmsIds) são herdadas como opcionais
+export class UpdateAssetDto extends PartialType(CreateAssetDto) {}

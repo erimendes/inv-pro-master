@@ -1,4 +1,3 @@
-// src/modules/users/user.service.ts
 import {
   Injectable,
   ConflictException,
@@ -9,27 +8,31 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Prisma } from '../../../generated/prisma/client';
 import * as argon2 from 'argon2';
 
 @Injectable()
 export class UserService {
-  // 🔄 CORREÇÃO: Removido o "readonly" da injeção se necessário, mantendo o padrão do resto do app
   constructor(private prisma: PrismaService) {}
 
+  // Estrutura padrão de retorno para não expor a senha por acidente
   private readonly userSelect = {
     id: true,
     username: true,
     email: true,
     name: true,
     role: true,
+    departamento: true,
     authProvider: true,
+    ativo: true,
+    ultimoLogin: true,
     createdAt: true,
   };
 
   async create(data: CreateUserDto) {
     await this.validateUniqueFields(data.username, data.email);
 
-    let hashedPassword = '';
+    let hashedPassword: string | null = null;
     const provider = data.authProvider || 'AD';
 
     if (provider === 'LOCAL') {
@@ -39,7 +42,6 @@ export class UserService {
       hashedPassword = await argon2.hash(data.password);
     }
 
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user" (sem o .client)
     return this.prisma.user.create({
       data: {
         username: data.username,
@@ -48,6 +50,7 @@ export class UserService {
         name: data.name,
         role: data.role || 'USER',
         authProvider: provider,
+        departamento: data.departamento,
         ativo: data.ativo ?? true,
       },
       select: this.userSelect,
@@ -55,7 +58,6 @@ export class UserService {
   }
 
   async findAll() {
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: this.userSelect,
@@ -63,7 +65,6 @@ export class UserService {
   }
 
   async findOne(id: string) {
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: this.userSelect,
@@ -76,7 +77,6 @@ export class UserService {
   }
 
   async findByEmailOrUsername(identifier: string) {
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
     return this.prisma.user.findFirst({
       where: {
         OR: [
@@ -88,51 +88,52 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUserDto) {
-    // 1. Busca o usuário atual usando o método corrigido
-    const user = await this.findOne(id);
+    // 1. Garante que o usuário existe e traz os dados atuais
+    const currentUser = await this.findOne(id);
 
-    const updateData: any = {};
-    const inputData = data as any;
+    // Tipagem segura usando as definições geradas pelo Prisma
+    const updateData: Prisma.UserUpdateInput = {};
 
-    // 2. Filtra o e-mail se ele mudou de fato
-    if (inputData.email && inputData.email !== user.email) {
+    // 2. Valida e filtra alteração de e-mail único
+    if (data.email && data.email !== currentUser.email) {
       const emailExists = await this.prisma.user.findUnique({
-        where: { email: inputData.email },
+        where: { email: data.email },
       });
       if (emailExists) {
         throw new ConflictException('E-mail já está em uso');
       }
-      updateData.email = inputData.email;
+      updateData.email = data.email;
     }
 
-    // 3. Filtra o username se ele mudou de fato
-    if (inputData.username && inputData.username !== user.username) {
+    // 3. Valida e filtra alteração de username único
+    if (data.username && data.username !== currentUser.username) {
       const usernameExists = await this.prisma.user.findUnique({
-        where: { username: inputData.username },
+        where: { username: data.username },
       });
       if (usernameExists) {
         throw new ConflictException('Username já está em uso');
       }
-      updateData.username = inputData.username;
+      updateData.username = data.username;
     }
 
-    // 4. Copia os outros campos comuns opcionais
-    if (inputData.name) updateData.name = inputData.name;
-    if (inputData.role) updateData.role = inputData.role;
-    if (inputData.ativo !== undefined) updateData.ativo = inputData.ativo;
+    // 4. Mapeia campos opcionais e estruturados
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.departamento !== undefined) updateData.departamento = data.departamento;
+    if (data.ativo !== undefined) updateData.ativo = data.ativo;
+    if (data.authProvider !== undefined) updateData.authProvider = data.authProvider;
 
-    // 5. Criptografa a nova senha se informada
+    // 5. Criptografa nova senha se ela for informada no DTO
     if (data.password) {
       updateData.password = await argon2.hash(String(data.password));
     }
 
-    // Se nada mudou, retorna o usuário do findOne direto para poupar query
+    // Se nenhum dado real mudou, evita uma query desnecessária ao banco
     if (Object.keys(updateData).length === 0) {
-      return user;
+      return currentUser;
     }
 
     try {
-      // 🔄 CORREÇÃO: Atualização direta usando a instância limpa do Prisma
       return await this.prisma.user.update({
         where: { id },
         data: updateData,
@@ -147,7 +148,6 @@ export class UserService {
   async remove(id: string) {
     await this.findOne(id);
 
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
     await this.prisma.user.delete({
       where: { id },
     });
@@ -156,7 +156,6 @@ export class UserService {
   }
 
   async validateUniqueFields(username: string, email: string) {
-    // 🔄 CORREÇÃO: Alinhado para "this.prisma.user"
     const userExists = await this.prisma.user.findFirst({
       where: {
         OR: [{ email }, { username }],

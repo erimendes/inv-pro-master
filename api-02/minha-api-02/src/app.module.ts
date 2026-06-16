@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/users/user.module';
 import { AssetsModule } from './modules/assets/assets.module'
 import { RacksModule } from './modules/racks/racks.module'
+import { ApplicationsModule } from './modules/applications/applications.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RacksModule } from './modules/racks/racks.module'
     UserModule,
     AssetsModule,
     RacksModule,
+    ApplicationsModule,
   ],
 })
 export class AppModule {}

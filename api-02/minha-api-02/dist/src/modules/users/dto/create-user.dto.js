@@ -19,26 +19,23 @@ class CreateUserDto {
     email;
     password;
     name;
+    departamento;
     role;
     authProvider;
     ativo;
     static _OPENAPI_METADATA_FACTORY() {
-        return { username: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: false, type: () => String, minLength: 6 }, name: { required: false, type: () => String }, role: { required: false, enum: ["USER", "USER_INFRA", "USER_DEV", "ADMIN", "SUPER_ADMIN", "ADMIN_INFRA", "ADMIN_DEV", "ADMIN_DEVOPS", "MANAGER_INFRA", "MANAGER_DEV", "MANAGER_DEVOPS"] }, authProvider: { required: false, enum: ["LOCAL", "AD"] }, ativo: { required: false, type: () => Boolean } };
+        return { username: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: false, type: () => String, minLength: 6 }, name: { required: false, type: () => String }, departamento: { required: false, type: () => String }, role: { required: false, enum: ["USER", "USER_INFRA", "USER_DEV", "ADMIN", "SUPER_ADMIN", "ADMIN_INFRA", "ADMIN_DEV", "ADMIN_DEVOPS", "MANAGER_INFRA", "MANAGER_DEV", "MANAGER_DEVOPS"] }, authProvider: { required: false, enum: ["LOCAL", "AD"] }, ativo: { required: false, type: () => Boolean } };
     }
 }
 exports.CreateUserDto = CreateUserDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        example: 'francisco',
-    }),
+    (0, swagger_1.ApiProperty)({ example: 'francisco' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "username", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        example: 'francisco@empresa.com',
-    }),
+    (0, swagger_1.ApiProperty)({ example: 'francisco@empresa.com' }),
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "email", void 0);
@@ -54,37 +51,31 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        example: 'Francisco Rabelo',
-        required: false,
-    }),
+    (0, swagger_1.ApiProperty)({ example: 'Francisco Rabelo', required: false }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "name", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        enum: client_1.Role,
-        example: client_1.Role.USER,
-    }),
+    (0, swagger_1.ApiProperty)({ example: 'TI', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "departamento", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ enum: client_1.Role, example: client_1.Role.USER }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(client_1.Role),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "role", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        enum: client_1.AuthProvider,
-        example: client_1.AuthProvider.AD,
-    }),
+    (0, swagger_1.ApiProperty)({ enum: client_1.AuthProvider, example: client_1.AuthProvider.AD }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(client_1.AuthProvider),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "authProvider", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        example: true,
-        required: false,
-    }),
+    (0, swagger_1.ApiProperty)({ example: true, required: false }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)

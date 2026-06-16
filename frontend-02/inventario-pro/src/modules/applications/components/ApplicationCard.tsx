@@ -4,7 +4,7 @@ import { ChevronRight, Eye, Pencil, Trash2, Database } from 'lucide-react';
 
 import type { CreateApplicationDto } from '../types/applications.types';
 
-// Garantimos que a extensão reconheça o ID
+// Garantimos que a extensão reconheça o ID e campos adicionais
 export interface Application extends CreateApplicationDto {
   id: number; 
   ambiente?: string; 
@@ -15,7 +15,7 @@ export interface Application extends CreateApplicationDto {
 interface ApplicationCardProps {
   app: Application; 
   opened: boolean;
-  isAdmin: boolean; // Recebe o 'canModifyApps' do componente pai
+  isAdmin: boolean; // 🟢 Recebe o booleano 'canModifyApps' calculado pelo componente pai
   onSelect: () => void;
   onNavigateDetails: (id: number) => void;
   onNavigateEdit: (id: number) => void;
@@ -27,7 +27,7 @@ interface ApplicationCardProps {
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   app,
   opened,
-  isAdmin, // Atua como o sinal verde de escrita vindo do mapa de permissões
+  isAdmin, // 🟢 Atua como o sinal verde de escrita vindo do mapa de permissões centralizado
   onSelect,
   onNavigateDetails,
   onNavigateEdit,
@@ -99,20 +99,27 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <div className="flex items-center justify-center gap-2"><Eye size={16} /> Detalhes</div>
           </button>
 
-          {/* 🔄 BOTÕES DE ESCRITA: Controlados dinamicamente pelo mapa de permissões do pai */}
+          {/* 🔄 BOTÕES DE ESCRITA: Exibidos de forma reativa caso o pai libere via isAdmin */}
           {isAdmin && (
             <>
               <button 
-                onClick={(e) => { e.stopPropagation(); if (app?.id) onNavigateEdit(app.id); }} 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (app?.id) onNavigateEdit(app.id); 
+                }} 
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-white transition hover:bg-blue-400"
               >
                 <Pencil size={18} />
               </button>
               <button 
-                onClick={(e) => { e.stopPropagation(); if (app?.id) onDelete(app.id); }} 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (app?.id) onDelete(app.id); 
+                }} 
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-400"
               >
-                <Trash2 size={18} /></button>
+                <Trash2 size={18} />
+              </button>
             </>
           )}
         </div>

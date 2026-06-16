@@ -6,55 +6,67 @@ export declare class UserService {
     constructor(prisma: PrismaService);
     private readonly userSelect;
     create(data: CreateUserDto): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
-        authProvider: import("../../../generated/prisma/enums").AuthProvider;
-        role: import("../../../generated/prisma/enums").Role;
-    }>;
-    findAll(): Promise<{
         name: string | null;
-        id: string;
-        createdAt: Date;
-        username: string;
-        email: string;
-        authProvider: import("../../../generated/prisma/enums").AuthProvider;
-        role: import("../../../generated/prisma/enums").Role;
-    }[]>;
-    findOne(id: string): Promise<{
-        name: string | null;
-        id: string;
-        createdAt: Date;
-        username: string;
-        email: string;
-        authProvider: import("../../../generated/prisma/enums").AuthProvider;
-        role: import("../../../generated/prisma/enums").Role;
-    }>;
-    findByEmailOrUsername(identifier: string): Promise<{
-        ativo: boolean;
-        name: string | null;
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
-        username: string;
-        email: string;
-        password: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-    } | null>;
-    update(id: string, data: UpdateUserDto): Promise<{
-        name: string | null;
-        id: string;
+        ativo: boolean;
         createdAt: Date;
+    }>;
+    findAll(): Promise<{
+        id: string;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: import("../../../generated/prisma/enums").Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
+    }[]>;
+    findOne(id: string): Promise<{
+        id: string;
+        username: string;
+        email: string;
+        name: string | null;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: import("../../../generated/prisma/enums").Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
+    }>;
+    findByEmailOrUsername(identifier: string): Promise<{
+        id: string;
+        username: string;
+        email: string;
+        password: string | null;
+        name: string | null;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: import("../../../generated/prisma/enums").Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    } | null>;
+    update(id: string, data: UpdateUserDto): Promise<{
+        id: string;
+        username: string;
+        email: string;
+        name: string | null;
+        authProvider: import("../../../generated/prisma/enums").AuthProvider;
+        role: import("../../../generated/prisma/enums").Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     remove(id: string): Promise<{
         message: string;

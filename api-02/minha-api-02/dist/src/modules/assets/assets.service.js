@@ -19,37 +19,28 @@ let AssetsService = class AssetsService {
         this.prisma = prisma;
     }
     async validateAssetRules(tipo, rackId, posicaoRack, hostFisicoId, currentAssetId) {
-        if (tipo === client_1.AtivoTipo.SERVIDOR_FISICO &&
-            hostFisicoId) {
-            throw new common_1.BadRequestException('Um Servidor Fisico nao pode pertencer a outro ativo.');
+        if (tipo === client_1.AtivoTipo.SERVIDOR_FISICO && hostFisicoId) {
+            throw new common_1.BadRequestException('Um Servidor Físico não pode pertencer a outro ativo.');
         }
         if (tipo === client_1.AtivoTipo.SERVIDOR_VIRTUAL) {
-            if (rackId ||
-                posicaoRack != null) {
-                throw new common_1.BadRequestException('Uma Maquina Virtual nao pode ser associada a Rack fisico.');
+            if (rackId || posicaoRack != null) {
+                throw new common_1.BadRequestException('Uma Máquina Virtual não pode ser associada a Rack físico.');
             }
             if (!hostFisicoId) {
-                throw new common_1.BadRequestException('Uma Maquina Virtual deve possuir um host fisico.');
+                throw new common_1.BadRequestException('Uma Máquina Virtual deve possuir um host físico.');
             }
-            if (currentAssetId &&
-                hostFisicoId === currentAssetId) {
-                throw new common_1.BadRequestException('Um ativo nao pode ser host dele mesmo.');
+            if (currentAssetId && hostFisicoId === currentAssetId) {
+                throw new common_1.BadRequestException('Um ativo não pode ser host dele mesmo.');
             }
             const host = await this.prisma.ativo.findUnique({
-                where: {
-                    id: hostFisicoId,
-                },
-                select: {
-                    id: true,
-                    tipo: true,
-                },
+                where: { id: hostFisicoId },
+                select: { id: true, tipo: true },
             });
             if (!host) {
-                throw new common_1.NotFoundException(`Host fisico #${hostFisicoId} nao encontrado.`);
+                throw new common_1.NotFoundException(`Host físico #${hostFisicoId} não encontrado.`);
             }
-            if (host.tipo !==
-                client_1.AtivoTipo.SERVIDOR_FISICO) {
-                throw new common_1.BadRequestException('Uma VM so pode pertencer a um Servidor Fisico.');
+            if (host.tipo !== client_1.AtivoTipo.SERVIDOR_FISICO) {
+                throw new common_1.BadRequestException('Uma VM só pode pertencer a um Servidor Físico.');
             }
         }
     }
@@ -97,31 +88,17 @@ let AssetsService = class AssetsService {
                     glpiId: data.glpiId,
                     posicaoRack: data.posicaoRack,
                     tamanhoU: data.tamanhoU,
-                    ...(data.userId
-                        ? {
-                            user: {
-                                connect: { id: data.userId },
-                            },
-                        }
-                        : {}),
-                    ...(data.rackId
-                        ? {
-                            rack: {
-                                connect: { id: data.rackId },
-                            },
-                        }
-                        : {}),
-                    ...(data.hostFisicoId
-                        ? {
-                            host: {
-                                connect: { id: data.hostFisicoId },
-                            },
-                        }
+                    ...(data.userId ? { user: { connect: { id: data.userId } } } : {}),
+                    ...(data.rackId ? { rack: { connect: { id: data.rackId } } } : {}),
+                    ...(data.hostFisicoId ? { host: { connect: { id: data.hostFisicoId } } } : {}),
+                    ...(data.vmsIds && data.vmsIds.length > 0 && tipoAtivo === client_1.AtivoTipo.SERVIDOR_FISICO
+                        ? { vms: { connect: data.vmsIds.map((id) => ({ id })) } }
                         : {}),
                 },
                 include: {
                     rack: true,
                     host: true,
+                    vms: true,
                 },
             });
         }
@@ -156,6 +133,7 @@ let AssetsService = class AssetsService {
                         sistemaOperacional: true,
                         ipPrincipal: true,
                         status: true,
+                        powerState: true,
                     },
                 },
                 aplicacoes: {
@@ -216,6 +194,7 @@ let AssetsService = class AssetsService {
                         ram: true,
                         armazenamento: true,
                         status: true,
+                        powerState: true,
                         emUso: true,
                     },
                 },
@@ -304,6 +283,9 @@ let AssetsService = class AssetsService {
                     host: data.hostFisicoId !== undefined
                         ? (data.hostFisicoId ? { connect: { id: data.hostFisicoId } } : { disconnect: true })
                         : undefined,
+                    vms: data.vmsIds !== undefined && tipoFinal === client_1.AtivoTipo.SERVIDOR_FISICO
+                        ? { set: data.vmsIds.map((vmId) => ({ id: vmId })) }
+                        : undefined,
                 },
                 include: {
                     rack: true,
@@ -351,12 +333,8 @@ let AssetsService = class AssetsService {
             data: {
                 posicaoRack: data.posicaoRack,
                 rack: data.rackId
-                    ? {
-                        connect: { id: data.rackId },
-                    }
-                    : {
-                        disconnect: true,
-                    },
+                    ? { connect: { id: data.rackId } }
+                    : { disconnect: true },
             },
         });
     }

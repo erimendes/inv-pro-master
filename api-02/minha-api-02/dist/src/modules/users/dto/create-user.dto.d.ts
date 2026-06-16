@@ -4,6 +4,7 @@ export declare class CreateUserDto {
     email: string;
     password?: string;
     name?: string;
+    departamento?: string;
     role?: Role;
     authProvider?: AuthProvider;
     ativo?: boolean;

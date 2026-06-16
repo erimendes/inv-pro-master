@@ -1,5 +1,5 @@
 // /src/modules/assets/pages/AssetDetailsPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -8,22 +8,23 @@ import {
   Monitor,
   Network,
   HardDrive,
+  Cpu,
 } from 'lucide-react';
 
 import { assetsService } from '../services/assets.service';
 import type { Asset } from '../types/asset.types';
-// import { useAuth } from '../../../app/hooks/useAuth'; // ⬅️ Exemplo de import de autenticação
+import { useAuth } from '../../auth/context/AuthContext'; 
+import { canModifyModule } from '../../../shared/constants/roles';
 
 export default function AssetDetailsPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user: currentUser } = useAuth();
 
-  // Se você tiver um hook de auth, use-o aqui para pegar os dados do usuário.
-  // Exemplo: const { user } = useAuth();
-  // Caso não tenha hook, simule temporariamente para teste: const user = { role: 'ADMIN' };
-  const user = { role: 'ADMIN' }; 
-
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  // 🛡️ Validação de privilégios de gravação/edição central do app
+  const canEditAssets = useMemo(() => {
+    return canModifyModule(currentUser?.role, 'assets');
+  }, [currentUser]);
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -70,6 +71,14 @@ export default function AssetDetailsPage() {
     }).format(value);
   }
 
+  // Determina a cor visual baseada no Enum de PowerState do Prisma (ON, OFF, PAUSED, SUSPENDED)
+  function getPowerStateBadge(state?: string) {
+    const normalState = (state || '').toUpperCase();
+    if (normalState === 'ON') return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+    if (normalState === 'OFF') return 'bg-red-500/10 border-red-500/30 text-red-400';
+    return 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070a13] text-slate-400">
@@ -80,9 +89,9 @@ export default function AssetDetailsPage() {
 
   if (errorMessage) {
     return (
-      <div className="p-6">
-        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-5 text-red-300">
-          {errorMessage}
+      <div className="flex min-h-screen items-center justify-center bg-[#070a13] p-6">
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-5 text-red-300 max-w-md text-center">
+          ⚠️ {errorMessage}
         </div>
       </div>
     );
@@ -115,18 +124,18 @@ export default function AssetDetailsPage() {
             <h1 className="text-4xl font-black uppercase tracking-tight text-white">
               {asset.hostname || 'Sem Hostname'}
             </h1>
-            <p className="mt-3 text-slate-400">Visualização completa do ativo</p>
+            <p className="mt-3 text-sm text-slate-400">Visualização completa dos parâmetros de inventário e infraestrutura</p>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {/* 🔄 BOTÃO EDITAR CONDICIONAL */}
-            {isAdmin && (
+            {/* BOTÃO EDITAR CONTROLADO VIA ROLES.TS */}
+            {canEditAssets && (
               <button
                 onClick={() => navigate(`/assets/${asset.id}/edit`)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-black uppercase tracking-wider text-slate-950 transition hover:bg-emerald-400"
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-black uppercase tracking-wider text-slate-950 transition hover:bg-emerald-400 hover:scale-[1.02]"
               >
                 <Pencil size={16} />
-                Editar
+                Editar Ativo
               </button>
             )}
             <button
@@ -139,63 +148,66 @@ export default function AssetDetailsPage() {
           </div>
         </div>
 
-        {/* MÁQUINAS VIRTUAIS */}
+        {/* 🆕 SEÇÃO: MÁQUINAS VIRTUAIS HOSPEDADAS (SE EXISTIREM) */}
         {asset.vms && asset.vms.length > 0 && (
-          <section className="mb-8 rounded-2xl border border-emerald-500/20 bg-[#0a0f1d] p-6 shadow-2xl">
+          <section className="mb-8 rounded-2xl border border-cyan-500/20 bg-[#0a0f1d] p-6 shadow-2xl">
             <div className="mb-6 flex items-center gap-3">
-              <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400">
+              <div className="rounded-xl bg-cyan-500/10 p-3 text-cyan-400 border border-cyan-500/20">
                 <Server size={22} />
               </div>
               <div>
                 <h2 className="text-2xl font-black uppercase tracking-tight text-white">
-                  Máquinas Virtuais
+                  Máquinas Virtuais Dependentes
                 </h2>
-                <p className="text-sm text-slate-400">VMs hospedadas neste servidor</p>
+                <p className="text-sm text-slate-400">Instâncias virtualizadas alocadas e rodando neste host físico</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {asset.vms.map((vm: any) => (
+              {asset.vms.map((vm) => (
                 <div
                   key={vm.id}
-                  className="group rounded-xl border border-slate-800 bg-[#111625] p-5 transition-all hover:border-emerald-500/30 hover:bg-[#151b2d]"
+                  className="group flex flex-col justify-between rounded-xl border border-slate-800/80 bg-[#111625] p-5 transition-all hover:border-cyan-500/40 hover:bg-[#141b2f] shadow-lg"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{vm.hostname}</h3>
-                      <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-500">
-                        {vm.sistemaOperacional || 'Sem SO'}
-                      </p>
+                  <div>
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{vm.hostname}</h3>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-500">
+                          {vm.sistemaOperacional || 'Sistema Operacional não mapeado'}
+                        </p>
+                      </div>
+                      
+                      <span className={`rounded-lg border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${getPowerStateBadge(vm.powerState)}`}>
+                        {vm.powerState || 'VM'}
+                      </span>
                     </div>
-                    <span className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                      VM
-                    </span>
-                  </div>
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">IP</span>
-                      <span className="font-mono text-slate-300">{vm.ipPrincipal || '-'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">CPU</span>
-                      <span className="text-slate-300">{vm.cpu || '-'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">RAM</span>
-                      <span className="text-slate-300">{vm.ram || '-'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Disco</span>
-                      <span className="text-slate-300">{vm.armazenamento || '-'}</span>
+                    <div className="space-y-2.5 border-t border-slate-800/50 pt-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">IP de Gerência</span>
+                        <span className="font-mono text-slate-300">{vm.ipPrincipal || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Topologia vCPU</span>
+                        <span className="text-slate-300 text-xs font-semibold">{vm.cpu || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Memória Provisionada</span>
+                        <span className="text-slate-300 font-semibold">{vm.ram || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Storage Virtual</span>
+                        <span className="text-slate-300 font-semibold">{vm.armazenamento || '-'}</span>
+                      </div>
                     </div>
                   </div>
 
                   <button
                     onClick={() => navigate(`/assets/${vm.id}`)}
-                    className="mt-5 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-bold text-slate-300 transition hover:border-emerald-500/40 hover:text-white"
+                    className="mt-5 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-400 transition hover:border-cyan-500/40 hover:bg-slate-900 hover:text-white"
                   >
-                    Abrir VM
+                    Abrir Painel da VM
                   </button>
                 </div>
               ))}
@@ -203,72 +215,72 @@ export default function AssetDetailsPage() {
           </section>
         )}
 
-        {/* IDENTIFICAÇÃO */}
-        <SectionCard title="Identificação" icon={<Monitor size={20} />}>
+        {/* IDENTIFICAÇÃO FÍSICA E PATRIMONIAL */}
+        <SectionCard title="Identificação Patrimonial" icon={<Monitor size={20} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DetailItem label="ID" value={asset.id} />
-            <DetailItem label="Patrimônio" value={asset.patrimonio} />
+            <DetailItem label="ID Registro" value={asset.id} />
+            <DetailItem label="Código de Patrimônio" value={asset.patrimonio} />
             <DetailItem label="Hostname" value={asset.hostname} />
-            <DetailItem label="Apelido" value={asset.apelido} />
+            <DetailItem label="Tag / Apelido" value={asset.apelido} />
             <DetailItem label="Fabricante" value={asset.fabricante} />
-            <DetailItem label="Hardware" value={asset.hardware} />
-            <DetailItem label="Modelo" value={asset.modelo} />
-            <DetailItem label="Serial" value={asset.serial} />
+            <DetailItem label="Família de Hardware" value={asset.hardware} />
+            <DetailItem label="Modelo Comercial" value={asset.modelo} />
+            <DetailItem label="Número de Série" value={asset.serial} />
           </div>
         </SectionCard>
 
-        {/* REDE E SISTEMA */}
-        <SectionCard title="Rede / Sistema" icon={<Network size={20} />}>
+        {/* RECURSOS COMPUTACIONAIS E LÓGICOS */}
+        <SectionCard title="Capacidade Lógica e Rede" icon={<Network size={20} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DetailItem label="IP" value={asset.ipPrincipal} />
-            <DetailItem label="Sistema Operacional" value={asset.sistemaOperacional} />
-            <DetailItem label="CPU" value={asset.cpu} />
-            <DetailItem label="RAM" value={asset.ram} />
-            <DetailItem label="Disco" value={asset.armazenamento} />
-            <DetailItem label="Descrição / Uso" value={asset.descricao} />
+            <DetailItem label="Endereço IP Principal" value={asset.ipPrincipal} />
+            <DetailItem label="Distribuição / SO" value={asset.sistemaOperacional} />
+            <DetailItem label="Modelo e Cores de CPU" value={asset.cpu} />
+            <DetailItem label="Capacidade total RAM" value={asset.ram} />
+            <DetailItem label="Volumetria Armazenamento" value={asset.armazenamento} />
+            <DetailItem label="Escopo de Descrição" value={asset.descricao} />
           </div>
         </SectionCard>
 
-        {/* HOST RELACIONADO */}
+        {/* HIPERVISOR HOST RELACIONADO (Aparece se o ativo inspecionado for uma VM) */}
         {asset.host && (
-          <SectionCard title="Servidor Host" icon={<Server size={20} />}>
+          <SectionCard title="Servidor Hospedeiro (Host Pai)" icon={<Cpu size={20} />}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <DetailItem label="Hostname" value={asset.host.hostname} />
-              <DetailItem label="Patrimônio" value={asset.host.patrimonio} />
-              <DetailItem label="IP" value={asset.host.ipPrincipal} />
+              <DetailItem label="Hostname do Servidor" value={asset.host.hostname} />
+              <DetailItem label="Código de Patrimônio" value={asset.host.patrimonio} />
+              <DetailItem label="IP do Hipervisor" value={asset.host.ipPrincipal} />
               <DetailItem label="Sistema Operacional" value={asset.host.sistemaOperacional} />
             </div>
 
             <button
               onClick={() => navigate(`/assets/${asset.host?.id}`)}
-              className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+              className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-emerald-400 transition hover:bg-emerald-500/20"
             >
-              Abrir Host
+              Inspecionar Servidor Pai
             </button>
           </SectionCard>
         )}
 
-        {/* RACK */}
-        <SectionCard title="Rack" icon={<HardDrive size={20} />}>
+        {/* ALOCAÇÃO FÍSICA NO DATACENTER */}
+        <SectionCard title="Distribuição em Rack" icon={<HardDrive size={20} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DetailItem label="Rack" value={asset.rack?.nome} />
-            <DetailItem label="Posição" value={asset.posicaoRack ? `${asset.posicaoRack}U` : '-'} />
-            <DetailItem label="Tamanho" value={asset.tamanhoU ? `${asset.tamanhoU}U` : '-'} />
+            <DetailItem label="Unidade Identificadora do Rack" value={asset.rack?.nome} />
+            <DetailItem label="Posição de Origem" value={asset.posicaoRack ? `${asset.posicaoRack}U` : '-'} />
+            <DetailItem label="Tamanho Ocupado" value={asset.tamanhoU ? `${asset.tamanhoU}U` : '-'} />
           </div>
         </SectionCard>
 
-        {/* AQUISIÇÃO */}
-        <SectionCard title="Aquisição" icon={<Monitor size={20} />}>
+        {/* METADADOS CONTÁBEIS */}
+        <SectionCard title="Dados de Aquisição e Custos" icon={<Monitor size={20} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DetailItem label="Data Compra" value={formatDate(asset.dataCompra)} />
-            <DetailItem label="Valor" value={formatCurrency(asset.valor ? Number(asset.valor) : null)} />
+            <DetailItem label="Data de Compra" value={formatDate(asset.dataCompra)} />
+            <DetailItem label="Custo Contábil" value={formatCurrency(asset.valor ? Number(asset.valor) : null)} />
           </div>
         </SectionCard>
 
-        {/* OBSERVAÇÕES */}
-        <SectionCard title="Observações" icon={<Monitor size={20} />}>
-          <div className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-slate-300">
-            {asset.observacoes || 'Nenhuma observação cadastrada.'}
+        {/* OBSERVAÇÕES INTERNAS */}
+        <SectionCard title="Anotações e Observações Gerais" icon={<Monitor size={20} />}>
+          <div className="rounded-2xl border border-slate-800 bg-[#050811] p-5 text-slate-400 text-sm font-medium leading-relaxed">
+            {asset.observacoes || 'Nenhuma observação técnica cadastrada para este ativo.'}
           </div>
         </SectionCard>
 
@@ -279,9 +291,9 @@ export default function AssetDetailsPage() {
 
 function SectionCard({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="mb-8 rounded-2xl border border-slate-800 bg-[#0a0f1d] p-6 shadow-2xl">
+    <section className="mb-8 rounded-2xl border border-slate-800/80 bg-[#0a0f1d] p-6 shadow-2xl">
       <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400">{icon}</div>
+        <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400 border border-emerald-500/20">{icon}</div>
         <h2 className="text-2xl font-black uppercase tracking-tight text-white">{title}</h2>
       </div>
       {children}
@@ -291,7 +303,7 @@ function SectionCard({ title, icon, children }: { title: string; icon?: React.Re
 
 function DetailItem({ label, value }: { label: string; value?: any }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-[#111625] p-4">
+    <div className="rounded-xl border border-slate-800/60 bg-[#111625] p-4">
       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className="break-words text-sm font-semibold text-white">
         {value !== null && value !== undefined && value !== '' ? String(value) : '-'}

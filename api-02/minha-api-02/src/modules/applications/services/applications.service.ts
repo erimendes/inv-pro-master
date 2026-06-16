@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Criticidade, SistemaCategoria } from '../../../generated/prisma/client';
+import { Criticidade, SistemaCategoria } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { CreateApplicationDto } from '../dto/create-application.dto';
 import { UpdateApplicationDto } from '../dto/update-application.dto';

@@ -7,20 +7,13 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../../database/prisma.service';
-
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
-
-import {
-  AtivoTipo,
-  AtivoStatus,
-} from '../../../generated/prisma/client';
+import { AtivoTipo, AtivoStatus } from '../../../generated/prisma/client';
 
 @Injectable()
 export class AssetsService {
-  constructor(
-    private prisma: PrismaService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   private async validateAssetRules(
     tipo: AtivoTipo,
@@ -30,67 +23,45 @@ export class AssetsService {
     currentAssetId?: number,
   ): Promise<void> {
 
-    if (
-      tipo === AtivoTipo.SERVIDOR_FISICO &&
-      hostFisicoId
-    ) {
+    if (tipo === AtivoTipo.SERVIDOR_FISICO && hostFisicoId) {
       throw new BadRequestException(
-        'Um Servidor Fisico nao pode pertencer a outro ativo.',
+        'Um Servidor Físico não pode pertencer a outro ativo.',
       );
     }
 
-    if (
-      tipo === AtivoTipo.SERVIDOR_VIRTUAL
-    ) {
-
-      if (
-        rackId ||
-        posicaoRack != null
-      ) {
+    if (tipo === AtivoTipo.SERVIDOR_VIRTUAL) {
+      if (rackId || posicaoRack != null) {
         throw new BadRequestException(
-          'Uma Maquina Virtual nao pode ser associada a Rack fisico.',
+          'Uma Máquina Virtual não pode ser associada a Rack físico.',
         );
       }
 
       if (!hostFisicoId) {
         throw new BadRequestException(
-          'Uma Maquina Virtual deve possuir um host fisico.',
+          'Uma Máquina Virtual deve possuir um host físico.',
         );
       }
 
-      if (
-        currentAssetId &&
-        hostFisicoId === currentAssetId
-      ) {
+      if (currentAssetId && hostFisicoId === currentAssetId) {
         throw new BadRequestException(
-          'Um ativo nao pode ser host dele mesmo.',
+          'Um ativo não pode ser host dele mesmo.',
         );
       }
 
-      const host =
-        await this.prisma.ativo.findUnique({
-          where: {
-            id: hostFisicoId,
-          },
-
-          select: {
-            id: true,
-            tipo: true,
-          },
-        });
+      const host = await this.prisma.ativo.findUnique({
+        where: { id: hostFisicoId },
+        select: { id: true, tipo: true },
+      });
 
       if (!host) {
         throw new NotFoundException(
-          `Host fisico #${hostFisicoId} nao encontrado.`,
+          `Host físico #${hostFisicoId} não encontrado.`,
         );
       }
 
-      if (
-        host.tipo !==
-        AtivoTipo.SERVIDOR_FISICO
-      ) {
+      if (host.tipo !== AtivoTipo.SERVIDOR_FISICO) {
         throw new BadRequestException(
-          'Uma VM so pode pertencer a um Servidor Fisico.',
+          'Uma VM só pode pertencer a um Servidor Físico.',
         );
       }
     }
@@ -148,34 +119,19 @@ export class AssetsService {
           posicaoRack: data.posicaoRack,
           tamanhoU: data.tamanhoU,
 
-          // 🔄 CORREÇÃO TS2322 (XOR): Relacionamentos mapeados via objetos 'connect' nativos
-          ...(data.userId
-            ? {
-                user: {
-                  connect: { id: data.userId },
-                },
-              }
-            : {}),
-
-          ...(data.rackId
-            ? {
-                rack: {
-                  connect: { id: data.rackId },
-                },
-              }
-            : {}),
-
-          ...(data.hostFisicoId
-            ? {
-                host: {
-                  connect: { id: data.hostFisicoId },
-                },
-              }
+          ...(data.userId ? { user: { connect: { id: data.userId } } } : {}),
+          ...(data.rackId ? { rack: { connect: { id: data.rackId } } } : {}),
+          ...(data.hostFisicoId ? { host: { connect: { id: data.hostFisicoId } } } : {}),
+          
+          // 🆕 Vincula as VMs filhas caso o servidor seja criado já contendo instâncias
+          ...(data.vmsIds && data.vmsIds.length > 0 && tipoAtivo === AtivoTipo.SERVIDOR_FISICO
+            ? { vms: { connect: data.vmsIds.map((id) => ({ id })) } }
             : {}),
         },
         include: {
           rack: true,
           host: true,
+          vms: true,
         },
       });
     } catch (error) {
@@ -191,11 +147,9 @@ export class AssetsService {
       where: {
         tipo: tipoFiltro,
       },
-
       orderBy: {
         hostname: 'asc',
       },
-
       include: {
         rack: true,
         host: {
@@ -213,6 +167,7 @@ export class AssetsService {
             sistemaOperacional: true,
             ipPrincipal: true,
             status: true,
+            powerState: true,
           },
         },
         aplicacoes: {
@@ -232,21 +187,16 @@ export class AssetsService {
         where: {
           rackId: null,
         },
-
         orderBy: {
           hostname: 'asc',
         },
-
         include: {
           host: true,
         },
       });
-
     } catch (error) {
       console.error(error);
-      throw new InternalServerErrorException(
-        'Erro ao acessar tabela de ativos.',
-      );
+      throw new InternalServerErrorException('Erro ao acessar tabela de ativos.');
     }
   }
 
@@ -279,6 +229,7 @@ export class AssetsService {
             ram: true,
             armazenamento: true,
             status: true,
+            powerState: true,
             emUso: true,
           },
         },
@@ -302,9 +253,7 @@ export class AssetsService {
     });
 
     if (!asset) {
-      throw new NotFoundException(
-        `Ativo #${id} nao encontrado`,
-      );
+      throw new NotFoundException(`Ativo #${id} nao encontrado`);
     }
 
     return asset;
@@ -375,7 +324,6 @@ export class AssetsService {
             ? (data.tamanhoU != null ? Number(data.tamanhoU) : null)
             : undefined,
 
-          // 🔄 CORREÇÃO TS2322 (XOR): Acoplamento correto das conexões e desconexões
           user: data.userId !== undefined
             ? (data.userId ? { connect: { id: data.userId } } : { disconnect: true })
             : undefined,
@@ -386,6 +334,11 @@ export class AssetsService {
 
           host: data.hostFisicoId !== undefined
             ? (data.hostFisicoId ? { connect: { id: data.hostFisicoId } } : { disconnect: true })
+            : undefined,
+
+          // 🚀 🆕 RELACIONAMENTO EM LOTE: Atualiza e substitui os vínculos das VMs filhas com o Host
+          vms: data.vmsIds !== undefined && tipoFinal === AtivoTipo.SERVIDOR_FISICO
+            ? { set: data.vmsIds.map((vmId) => ({ id: vmId })) }
             : undefined,
         },
         include: {
@@ -412,9 +365,7 @@ export class AssetsService {
     });
 
     if (!asset) {
-      throw new NotFoundException(
-        `Ativo #${id} nao encontrado`,
-      );
+      throw new NotFoundException(`Ativo #${id} nao encontrado`);
     }
 
     if (asset.vms.length > 0) {
@@ -429,9 +380,7 @@ export class AssetsService {
       });
     } catch (error) {
       console.error(error);
-      throw new InternalServerErrorException(
-        `Erro ao remover ativo #${id}`,
-      );
+      throw new InternalServerErrorException(`Erro ao remover ativo #${id}`);
     }
   }
 
@@ -456,14 +405,9 @@ export class AssetsService {
       where: { id },
       data: {
         posicaoRack: data.posicaoRack,
-        rack:
-          data.rackId
-            ? {
-                connect: { id: data.rackId },
-              }
-            : {
-                disconnect: true,
-              },
+        rack: data.rackId
+          ? { connect: { id: data.rackId } }
+          : { disconnect: true },
       },
     });
   }

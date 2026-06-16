@@ -11,13 +11,16 @@ export declare class AuthService {
     private readonly ldapService;
     constructor(userService: UserService, prisma: PrismaService, jwt: JwtService, ldapService: LdapService);
     register(dto: CreateUserDto): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: import("../../../generated/prisma/enums").Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     login(credentials: LoginDto, meta: {
         ip?: string;

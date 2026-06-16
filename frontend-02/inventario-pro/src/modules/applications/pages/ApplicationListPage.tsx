@@ -13,9 +13,22 @@ export const ApplicationList = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // 🎯 AGORA COM MAPA: Verifica dinamicamente se a role atual pode CRIAR/EDITAR/EXCLUIR aplicações
-  // (ADMIN, SUPER_ADMIN, ADMIN_DEV e ADMIN_DEVOPS retornarão true. MANAGER_INFRA retornará false)
-  const canModifyApps = canModifyModule(user?.role, 'applications');
+  // 🎯 CORREÇÃO CRÍTICA: O useMemo + toUpperCase garante o cálculo em tempo real assim que o 'user' carrega em memória
+  const canModifyApps = useMemo(() => {
+    console.log("=== SCANNER DE PERMISSÃO ===");
+    console.log("Tipo do dado do user.role:", typeof user?.role);
+    console.log("Valor exato de user.role:", JSON.stringify(user?.role));
+    
+    if (!user?.role) return false;
+  
+    const roleLimpa = String(user.role).toUpperCase().trim();
+    const resultado = canModifyModule(roleLimpa, 'applications');
+    
+    console.log(`Procurando por '${roleLimpa}' em 'applications'. Resultado:`, resultado);
+    console.log("============================");
+    
+    return resultado;
+  }, [user]);
 
   // Estados dos Filtros vindos da API
   const [apps, setApps] = useState<Application[]>([]);
@@ -193,7 +206,7 @@ export const ApplicationList = () => {
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Sistemas</span>
               </div>
               
-              {/* 🔄 BOTÃO CONDICIONAL: Usa a nova regra de escrita baseada no mapa de privilégios */}
+              {/* 🔄 BOTÃO CONDICIONAL */}
               {canModifyApps && (
                 <button
                   onClick={() => navigate('/applications/new')}
@@ -241,7 +254,7 @@ export const ApplicationList = () => {
                     app={app}
                     opened={selectedCard === app.id}
                     
-                    // 🔄 IMPORTANTE: Envia o poder real de escrita modificado pelo mapa para o card filho
+                    // 🔄 PASSANDO A FLAG ATUALIZADA DO USEMEMO
                     isAdmin={canModifyApps} 
                     
                     onSelect={() => setSelectedCard(selectedCard === app.id ? null : app.id)}

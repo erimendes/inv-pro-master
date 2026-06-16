@@ -1,5 +1,4 @@
 // src/modules/assets/dto/create-asset.dto.ts
-
 import {
   IsBoolean,
   IsDateString,
@@ -9,6 +8,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  IsArray, // 🔄 Adicionado para validar o lote de VMs
 } from 'class-validator';
 
 import {
@@ -257,4 +257,13 @@ export class CreateAssetDto {
   @IsOptional()
   @IsInt()
   glpiId?: number;
+
+  //////////////////////////////////////////////////////
+  // 🆕 Injeção em lote de VMs (Multi-Select do Front-end)
+  //////////////////////////////////////////////////////
+  @ApiPropertyOptional({ type: [Number] })
+  @IsOptional()
+  @IsArray({ message: 'O campo vmsIds deve ser um array' })
+  @IsInt({ each: true, message: 'Cada ID de VM deve ser um número inteiro' })
+  vmsIds?: number[];
 }

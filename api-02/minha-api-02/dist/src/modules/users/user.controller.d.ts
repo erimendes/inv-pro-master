@@ -16,49 +16,64 @@ export declare class UserController {
     private readonly service;
     constructor(service: UserService);
     updateMe(req: AuthenticatedRequest, body: UpdateUserDto): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     create(body: CreateUserDto): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     findAll(): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }[]>;
     findOne(id: string): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     update(id: string, body: UpdateUserDto): Promise<{
-        name: string | null;
         id: string;
-        createdAt: Date;
         username: string;
         email: string;
+        name: string | null;
         authProvider: import("../../../generated/prisma/enums").AuthProvider;
         role: Role;
+        departamento: string | null;
+        ultimoLogin: Date | null;
+        ativo: boolean;
+        createdAt: Date;
     }>;
     remove(id: string): Promise<{
         message: string;

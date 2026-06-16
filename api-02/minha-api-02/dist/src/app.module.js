@@ -21,6 +21,7 @@ const auth_module_1 = require("./modules/auth/auth.module");
 const user_module_1 = require("./modules/users/user.module");
 const assets_module_1 = require("./modules/assets/assets.module");
 const racks_module_1 = require("./modules/racks/racks.module");
+const applications_module_1 = require("./modules/applications/applications.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -40,6 +41,7 @@ exports.AppModule = AppModule = __decorate([
             user_module_1.UserModule,
             assets_module_1.AssetsModule,
             racks_module_1.RacksModule,
+            applications_module_1.ApplicationsModule,
         ],
     })
 ], AppModule);

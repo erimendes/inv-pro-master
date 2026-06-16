@@ -1,8 +1,11 @@
+import { Role, AuthProvider } from '../../../../generated/prisma/client';
 export declare class UpdateUserDto {
     name?: string;
     email?: string;
     username?: string;
     password?: string;
-    role?: string;
+    departamento?: string;
+    role?: Role;
+    authProvider?: AuthProvider;
     ativo?: boolean;
 }

@@ -7,7 +7,7 @@ import {
 import {
   Criticidade,
   SistemaCategoria,
-} from '../../../generated/prisma/client';
+} from '../../../../generated/prisma/client';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 

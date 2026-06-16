@@ -1,212 +1,343 @@
-import { useEffect, useMemo, useState } from 'react';
+// src/modules/assets/pages/AssetsListPage.tsx
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Search, ShieldAlert, Eye, Pencil, Trash2 } from 'lucide-react';
+import { useAuth } from '../../auth/context/AuthContext';
+import { canViewModule, canModifyModule } from '../../../shared/constants/roles';
 import { assetsService } from '../services/assets.service';
-import type { Asset, AssetTipo } from '../types/asset.types'; 
-import { useNotification } from '../../../app/providers/NotificationProvider';
-import { AssetRow } from '../components/AssetRow';
-import { useAuth } from '../../../modules/auth/context/AuthContext';
-import { canModifyModule } from '../../../shared/constants/roles'; // 🔄 Importa o verificador do Mapa
-
-type FilterTipo = AssetTipo | 'TODOS';
-
-const LISTA_TIPOS: FilterTipo[] = [
-  'TODOS',
-  'LAPTOP',
-  'DESKTOP',
-  'SERVIDOR_FISICO',
-  'SERVIDOR_VIRTUAL',
-  'SWITCH',
-  'ROTEADOR',
-  'STORAGE',
-  'MONITOR'
-];
+import type { Asset } from '../types/asset.types';
 
 export default function AssetsListPage() {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [selectedTipo, setSelectedTipo] = useState<FilterTipo>('TODOS');
-  const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
 
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const ITEMS_PER_PAGE = 4;
+  // Controla qual card está ativado para mostrar os botões no rodapé fixo
+  const [activeCardId, setActiveCardId] = useState<number | null>(null);
 
-  const { notify } = useNotification();
-  const navigate = useNavigate();
-  
-  // 🔄 Consulta o Mapa de Permissão para o módulo 'assets'
-  const { user } = useAuth();
-  const canCreateAsset = canModifyModule(user?.role, 'assets');
+  // Estados dos Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  useEffect(() => {
-    loadAssets();
-  }, []);
+  // Controle de Paginação Interna (8 itens = exatamente 2 linhas de 4 colunas)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
+  const canAccessAssetsModule = useMemo(() => {
+    return canViewModule(currentUser?.role, 'assets');
+  }, [currentUser]);
+
+  const canEditAssets = useMemo(() => {
+    return canModifyModule(currentUser?.role, 'assets');
+  }, [currentUser]);
+
+  // Reseta paginação e fecha botões abertos ao filtrar
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedTipo]);
+    setActiveCardId(null);
+  }, [searchTerm, typeFilter, statusFilter]);
 
-  async function loadAssets() {
-    try {
-      setLoading(true);
-      const data = await assetsService.getAll();
-      setAssets(data);
-    } catch (err) {
-      console.error(err);
-      setError('Erro ao carregar ativos');
-    } finally {
-      setLoading(false);
+  // Fecha os botões abertos ao mudar de página
+  useEffect(() => {
+    setActiveCardId(null);
+  }, [currentPage]);
+
+  /* ========================================================= */
+  /* CARREGA DADOS DO BACKEND */
+  /* ========================================================= */
+  useEffect(() => {
+    async function loadAssets() {
+      if (!canAccessAssetsModule) return;
+      try {
+        setLoading(true);
+        setError('');
+        const response = await assetsService.getAll();
+        setAssets(response || []);
+      } catch (err: any) {
+        console.error(err);
+        setError('Falha ao carregar o inventário de ativos físicos.');
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    loadAssets();
+  }, [canAccessAssetsModule]);
 
-  // 🔄 ALTERAÇÃO: Aceita 'number | string' para alinhar perfeitamente com o componente filho
-  async function handleDelete(id: number | string) {
-    if (!confirm('Deseja remover este ativo?')) return;
-    try {
-      
-      // 💡 Se o seu assetsService exigir estritamente string, usamos String(id).
-      // Se ele aceitar o tipo original, passamos apenas 'id'.
-      // Vamos usar o formato que o seu service espera:
-      await assetsService.remove(id as any); 
-  
-      // Atualiza o estado local removendo o ativo da tela de forma segura (compara como string ou número)
-      setAssets((prev) => prev.filter((asset) => String(asset.id) !== String(id)));
-      
-      notify('Ativo removido com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      notify('Erro ao remover ativo', 'error');
-    }
-  }
-
+  // Lógica de Filtragem Dinâmica
   const filteredAssets = useMemo(() => {
-    return assets.filter((a) => {
-      const hostname = (a.hostname ?? '').toLowerCase();
-      const fabricante = (a.fabricante ?? '').toLowerCase();
-      const modelo = (a.modelo ?? '').toLowerCase();
+    if (!canAccessAssetsModule || !assets) return [];
 
-      const matchesSearch =
-        hostname.includes(search.toLowerCase()) ||
-        fabricante.includes(search.toLowerCase()) ||
-        modelo.includes(search.toLowerCase());
+    return assets.filter((asset) => {
+      const matchesSearch = 
+        (asset.hostname?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (asset.fabricante?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (asset.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+        
+      const matchesType = typeFilter === '' || asset.tipo === typeFilter;
+      const matchesStatus = statusFilter === '' || asset.status === statusFilter;
 
-      const matchesTipo = selectedTipo === 'TODOS' || a.tipo === selectedTipo;
-      return matchesSearch && matchesTipo;
+      return matchesSearch && matchesType && matchesStatus;
     });
-  }, [assets, search, selectedTipo]);
+  }, [assets, searchTerm, typeFilter, statusFilter, canAccessAssetsModule]);
 
-  const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  
-  const paginatedAssets = useMemo(() => {
-    return filteredAssets.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredAssets, startIndex]);
+  async function handleDelete(id: number, hostname?: string | null) {
+    if (!window.confirm(`Tem certeza que deseja remover o ativo ${hostname || `#${id}`}?`)) return;
+    try {
+      await assetsService.delete(id);
+      setAssets((prev) => prev.filter((item) => item.id !== id));
+      setActiveCardId(null);
+      alert('Ativo removido com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.response?.data?.message || 'Erro ao remover o ativo.');
+    }
+  }
 
-  if (loading) return <div className="p-6 text-white">Carregando...</div>;
-  if (error) return <div className="p-6 text-red-400">{error}</div>;
+  function handleCardClick(id: number) {
+    setActiveCardId((prev) => (prev === id ? null : id));
+  }
+
+  if (!canAccessAssetsModule && !loading) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center bg-[#070a13] text-red-400 gap-4">
+        <ShieldAlert size={52} className="text-red-500 animate-bounce" />
+        <h2 className="text-2xl font-black uppercase tracking-wide">Acesso Negado</h2>
+        <p className="text-slate-400 text-sm max-w-sm text-center">Seu perfil não possui permissões para este módulo.</p>
+      </div>
+    );
+  }
+
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentAssets = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
+
+  const listagemTipos = [
+    { value: '', label: 'TODOS' },
+    { value: 'LAPTOP', label: 'LAPTOP' },
+    { value: 'DESKTOP', label: 'DESKTOP' },
+    { value: 'SERVIDOR_FISICO', label: 'SERVIDOR FISICO' },
+    { value: 'SERVIDOR_VIRTUAL', label: 'SERVIDOR VIRTUAL' },
+    { value: 'SWITCH', label: 'SWITCH' },
+    { value: 'ROTEADOR', label: 'ROTEADOR' },
+    { value: 'STORAGE', label: 'STORAGE' },
+    { value: 'MONITOR', label: 'MONITOR' },
+  ];
+
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#070a13] text-slate-400">Carregando...</div>;
+  if (error) return <div className="flex min-h-screen items-center justify-center bg-[#070a13] text-red-400 p-6">⚠️ {error}</div>;
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 p-6">
-      {/* MENU LATERAL DE FILTROS */}
-      <aside className="xl:w-72 rounded-3xl border border-white/5 bg-slate-900/60 p-6 h-fit">
-        <h2 className="mb-6 text-2xl font-black text-white">Tipos</h2>
-        <div className="space-y-2">
-          {LISTA_TIPOS.map((tipo) => (
-            <button
-              key={tipo}
-              onClick={() => setSelectedTipo(tipo)}
-              className={`w-full rounded-2xl px-4 py-3 text-left font-semibold transition ${
-                selectedTipo === tipo
-                  ? 'bg-cyan-500/20 border border-cyan-500/30 text-cyan-400'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {tipo.replaceAll('_', ' ')}
-            </button>
-          ))}
-        </div>
+    /* CONTAINER PRINCIPAL: items-stretch garante simetria total */
+    <div className="w-full min-h-screen flex bg-[#070a13] text-slate-100 overflow-hidden items-stretch">
+      
+      {/* COLUNA ESQUERDA COMPLETA (MENU LATERAL) */}
+      <aside className="w-64 border-r border-slate-800/40 bg-[#070a13] pt-6 px-6 flex flex-col gap-2 flex-shrink-0 hidden md:flex overflow-y-auto">
+        <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2 px-1">Tipos</p>
+        <nav className="flex flex-col gap-2">
+          {listagemTipos.map((tipo) => {
+            const isSelected = typeFilter === tipo.value;
+            return (
+              <button
+                key={tipo.value}
+                onClick={() => setTypeFilter(tipo.value)}
+                className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/10'
+                    : 'text-slate-400 border border-transparent hover:bg-slate-900/60 hover:text-slate-200'
+                }`}
+              >
+                {tipo.label}
+              </button>
+            );
+          })}
+        </nav>
       </aside>
 
-      {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 flex flex-col justify-between min-h-[600px]">
-        <div>
-          {/* HEADER */}
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-4xl font-black text-white">Ativos</h1>
-              <p className="mt-2 text-slate-400">Gestão da infraestrutura de TI</p>
+      {/* COLUNA DIREITA CONTEÚDO */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* HEADER TOP-RIGHT */}
+        <div className="flex flex-col gap-4 px-8 pt-6 pb-2 bg-[#070a13] flex-shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-4xl font-black tracking-tight text-white">Ativos</h1>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                    TIPO: {typeFilter === '' ? 'TODOS' : typeFilter}
+                  </span>
+                  <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-400">
+                    STATUS: {statusFilter === '' ? 'TODOS' : statusFilter}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-slate-400 leading-none">Gestão da infraestrutura de TI</p>
             </div>
-            
-            {/* 🎯 BOTÃO CONDICIONAL: Desativado automaticamente se o mapa negar privilégios de escrita */}
-            {canCreateAsset && (
+
+            {canEditAssets && (
               <button
                 onClick={() => navigate('/assets/new')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/20 px-5 py-3 font-bold text-cyan-400 transition hover:bg-cyan-500/30"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-black text-sm uppercase tracking-wider text-slate-950 transition-all hover:scale-[1.02] hover:bg-emerald-400 shadow-lg shadow-emerald-500/10"
               >
-                <Plus size={18} /> Novo Ativo
+                <span className="text-lg font-bold leading-none">+</span> Novo Ativo
               </button>
             )}
           </div>
-
-          {/* BUSCA */}
-          <div className="mb-6 rounded-2xl border border-white/5 bg-slate-900/60 p-4">
-            <input
-              type="text"
-              placeholder="Buscar hostname, fabricante ou modelo..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-          </div>
-
-          {/* CONTAINER DA LISTA */}
-          <div className="overflow-hidden rounded-3xl border border-white/5 bg-slate-900/40">
-            {paginatedAssets.length === 0 ? (
-              <div className="p-10 text-center text-slate-500">Nenhum ativo encontrado</div>
-            ) : (
-              paginatedAssets.map((asset) => (
-                <AssetRow
-                  key={asset.id}
-                  asset={asset}
-                  isOpen={selectedAssetId === asset.id}
-                  onToggle={() => setSelectedAssetId(selectedAssetId === asset.id ? null : asset.id)}
-                  onNavigate={navigate}
-                  onDelete={handleDelete}
-                  userRole={user?.role} // 🔄 Passando a role dinâmica do usuário ativo
-                />
-              ))
-            )}
-          </div>
         </div>
 
-        {/* CONTROLADOR DE PAGINAÇÃO */}
-        {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
-            <span className="text-sm text-slate-400">
-              Página <span className="font-semibold text-white">{currentPage}</span> de{' '}
-              <span className="font-semibold text-white">{totalPages}</span>
-            </span>
-            <div className="inline-flex gap-2">
+        {/* 🔄 CORREÇÃO: MUDADO DE justify-between PARA justify-start E items-start PARA TUDO SUBIR AUTOMATICAMENTE */}
+        <main className="flex-1 px-8 pt-2 pb-6 flex flex-col justify-start items-start overflow-y-auto w-full">
+          
+          {/* BARRA DE FILTROS INTERNOS */}
+          <div className="flex flex-col md:flex-row gap-4 w-full items-center mb-6 flex-shrink-0">
+            <div className="relative flex-1 max-w-xl w-full">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500">
+                <Search size={18} />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar hostname, fabricante ou modelo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[#0b1120] border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-[#0b1120] border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-cyan-500/50 transition appearance-none cursor-pointer w-full md:w-auto min-w-[180px]"
+            >
+              <option value="">Todos os status</option>
+              <option value="DISPONIVEL">Disponível</option>
+              <option value="EM_USO">Em Uso</option>
+              <option value="MANUTENCAO">Manutenção</option>
+              <option value="DESCARTADO">Descartado</option>
+            </select>
+          </div>
+
+          {/* 🔄 CORREÇÃO: w-full ADICIONADO PARA PREENCHER O ESPAÇO E EVITAR QUE OS CARDS ENCOLHAM */}
+          {filteredAssets.length === 0 ? (
+            <div className="flex h-40 w-full items-center justify-center rounded-3xl border border-dashed border-slate-800 text-slate-500 font-medium bg-slate-900/10">
+              Nenhum ativo correspondente aos filtros ou escopo de permissão.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-start w-full content-start flex-1">
+              {currentAssets.map((asset) => {
+                const isCardSelected = activeCardId === Number(asset.id);
+
+                return (
+                  <div 
+                    key={asset.id} 
+                    onClick={() => handleCardClick(Number(asset.id))}
+                    className={`group p-5 rounded-2xl bg-[#090d1a] border transition-all flex flex-col justify-between h-[180px] shadow-lg select-none cursor-pointer ${
+                      isCardSelected ? 'border-cyan-500 bg-[#0c1324] ring-2 ring-cyan-500/5' : 'border-slate-800/80 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-start gap-2 mb-3">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded transition-colors uppercase tracking-wide ${
+                          isCardSelected ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {asset.tipo.replace('_', ' ')}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          asset.status === 'DISPONIVEL' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {asset.status}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-white truncate">{asset.hostname || 'Sem Hostname'}</h3>
+                      <p className="text-xs text-slate-500 mt-1 font-medium truncate">
+                        {asset.fabricante && asset.fabricante !== '-' ? `${asset.fabricante} ` : ''}{asset.modelo || '-'}
+                      </p>
+                    </div>
+
+                    {/* RODAPÉ DO ITEM COMPARTILHADO */}
+                    <div className="mt-4 pt-3 border-t border-slate-800/50 h-[38px] flex items-center">
+                      {isCardSelected ? (
+                        <div 
+                          className="grid grid-cols-3 gap-1.5 w-full"
+                          onClick={(e) => e.stopPropagation()} 
+                        >
+                          <button
+                            onClick={() => navigate(`/assets/${asset.id}`)}
+                            className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-[11px] font-bold uppercase transition"
+                          >
+                            <Eye size={12} />
+                            Ver
+                          </button>
+
+                          {canEditAssets ? (
+                            <button
+                              onClick={() => navigate(`/assets/${asset.id}/edit`)}
+                              className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 text-[11px] font-bold uppercase transition"
+                            >
+                              <Pencil size={11} />
+                              Alt
+                            </button>
+                          ) : (
+                            <div className="py-1.5 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
+                              Lock
+                            </div>
+                          )}
+
+                          {canEditAssets ? (
+                            <button
+                              onClick={() => handleDelete(Number(asset.id), asset.hostname)}
+                              className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] font-bold uppercase transition"
+                            >
+                              <Trash2 size={11} />
+                              Del
+                            </button>
+                          ) : (
+                            <div className="py-1.5 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
+                              Lock
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-mono block truncate w-full">
+                          {asset.ipPrincipal || '-'}
+                        </span>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 🔄 PAINEL DE PAGINAÇÃO: w-full e mt-8 garante que fique sempre no rodapé de forma fixa */}
+          <div className="mt-8 pt-4 border-t border-slate-900 flex justify-between items-center text-xs text-slate-400 w-full flex-shrink-0">
+            <span>Página {currentPage} de {totalPages}</span>
+            <div className="flex gap-2">
               <button
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className="rounded-xl border border-white/5 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent"
+                onClick={() => setCurrentPage((prev) => prev - 1)}
+                className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 disabled:opacity-30 transition font-bold"
               >
                 Anterior
               </button>
               <button
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                className="rounded-xl border border-white/5 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent"
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 disabled:opacity-30 transition font-bold"
               >
                 Próxima
               </button>
             </div>
           </div>
-        )}
-      </main>
+
+        </main>
+      </div>
+
     </div>
   );
 }

@@ -13,15 +13,18 @@ exports.UpdateUserDto = void 0;
 const openapi = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
+const client_1 = require("../../../../generated/prisma/client");
 class UpdateUserDto {
     name;
     email;
     username;
     password;
+    departamento;
     role;
+    authProvider;
     ativo;
     static _OPENAPI_METADATA_FACTORY() {
-        return { name: { required: false, type: () => String }, email: { required: false, type: () => String, format: "email" }, username: { required: false, type: () => String }, password: { required: false, type: () => String }, role: { required: false, type: () => String }, ativo: { required: false, type: () => Boolean } };
+        return { name: { required: false, type: () => String }, email: { required: false, type: () => String, format: "email" }, username: { required: false, type: () => String }, password: { required: false, type: () => String }, departamento: { required: false, type: () => String }, role: { required: false, enum: ["USER", "USER_INFRA", "USER_DEV", "ADMIN", "SUPER_ADMIN", "ADMIN_INFRA", "ADMIN_DEV", "ADMIN_DEVOPS", "MANAGER_INFRA", "MANAGER_DEV", "MANAGER_DEVOPS"] }, authProvider: { required: false, enum: ["LOCAL", "AD"] }, ativo: { required: false, type: () => Boolean } };
     }
 }
 exports.UpdateUserDto = UpdateUserDto;
@@ -54,7 +57,19 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], UpdateUserDto.prototype, "departamento", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: client_1.Role }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", String)
 ], UpdateUserDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: client_1.AuthProvider }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.AuthProvider),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "authProvider", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),

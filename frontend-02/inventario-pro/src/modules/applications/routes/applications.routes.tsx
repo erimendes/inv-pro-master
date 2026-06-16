@@ -1,5 +1,5 @@
 import type { RouteObject } from 'react-router-dom';
-import { ApplicationList } from '../pages/ApplicationList.old';
+import { ApplicationList } from '../pages/ApplicationListPage';
 import { ApplicationDetails } from '../pages/ApplicationDetails';
 import { ApplicationForm } from '../pages/ApplicationForm';
 
