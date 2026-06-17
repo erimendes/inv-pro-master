@@ -88,7 +88,7 @@ export default function AssetsListPage() {
   async function handleDelete(id: number, hostname?: string | null) {
     if (!window.confirm(`Tem certeza que deseja remover o ativo ${hostname || `#${id}`}?`)) return;
     try {
-      await assetsService.delete(id);
+      await assetsService.remove(String(id));
       setAssets((prev) => prev.filter((item) => item.id !== id));
       setActiveCardId(null);
       alert('Ativo removido com sucesso!');
