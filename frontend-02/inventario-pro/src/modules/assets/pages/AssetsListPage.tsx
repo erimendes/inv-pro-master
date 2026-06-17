@@ -67,7 +67,7 @@ export default function AssetsListPage() {
     loadAssets();
   }, [canAccessAssetsModule]);
 
-  // Lógica de Filtragem Dinâmica
+  // Lógica de Filtragem Dinâmica Atualizada (Incluindo IP na busca)
   const filteredAssets = useMemo(() => {
     if (!canAccessAssetsModule || !assets) return [];
 
@@ -75,7 +75,8 @@ export default function AssetsListPage() {
       const matchesSearch = 
         (asset.hostname?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
         (asset.fabricante?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (asset.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+        (asset.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (asset.ipPrincipal?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
         
       const matchesType = typeFilter === '' || asset.tipo === typeFilter;
       const matchesStatus = statusFilter === '' || asset.status === statusFilter;
@@ -106,7 +107,7 @@ export default function AssetsListPage() {
       <div className="flex flex-col min-h-screen items-center justify-center bg-[#070a13] text-red-400 gap-4">
         <ShieldAlert size={52} className="text-red-500 animate-bounce" />
         <h2 className="text-2xl font-black uppercase tracking-wide">Acesso Negado</h2>
-        <p className="text-slate-400 text-sm max-w-sm text-center">Seu perfil não possui permissões para este módulo.</p>
+        <p className="text-slate-400 text-sm max-w-sm text-center">Seu perfil não possui permissions para este módulo.</p>
       </div>
     );
   }
@@ -132,7 +133,6 @@ export default function AssetsListPage() {
   if (error) return <div className="flex min-h-screen items-center justify-center bg-[#070a13] text-red-400 p-6">⚠️ {error}</div>;
 
   return (
-    /* CONTAINER PRINCIPAL: items-stretch garante simetria total */
     <div className="w-full min-h-screen flex bg-[#070a13] text-slate-100 overflow-hidden items-stretch">
       
       {/* COLUNA ESQUERDA COMPLETA (MENU LATERAL) */}
@@ -190,7 +190,6 @@ export default function AssetsListPage() {
           </div>
         </div>
 
-        {/* 🔄 CORREÇÃO: MUDADO DE justify-between PARA justify-start E items-start PARA TUDO SUBIR AUTOMATICAMENTE */}
         <main className="flex-1 px-8 pt-2 pb-6 flex flex-col justify-start items-start overflow-y-auto w-full">
           
           {/* BARRA DE FILTROS INTERNOS */}
@@ -201,7 +200,7 @@ export default function AssetsListPage() {
               </div>
               <input
                 type="text"
-                placeholder="Buscar hostname, fabricante ou modelo..."
+                placeholder="Buscar por hostname, IP, fabricante ou modelo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-[#0b1120] border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition"
@@ -221,7 +220,6 @@ export default function AssetsListPage() {
             </select>
           </div>
 
-          {/* 🔄 CORREÇÃO: w-full ADICIONADO PARA PREENCHER O ESPAÇO E EVITAR QUE OS CARDS ENCOLHAM */}
           {filteredAssets.length === 0 ? (
             <div className="flex h-40 w-full items-center justify-center rounded-3xl border border-dashed border-slate-800 text-slate-500 font-medium bg-slate-900/10">
               Nenhum ativo correspondente aos filtros ou escopo de permissão.
@@ -235,12 +233,12 @@ export default function AssetsListPage() {
                   <div 
                     key={asset.id} 
                     onClick={() => handleCardClick(Number(asset.id))}
-                    className={`group p-5 rounded-2xl bg-[#090d1a] border transition-all flex flex-col justify-between h-[180px] shadow-lg select-none cursor-pointer ${
+                    className={`group p-5 rounded-2xl bg-[#090d1a] border transition-all flex flex-col justify-between h-[140px] shadow-lg select-none cursor-pointer ${
                       isCardSelected ? 'border-cyan-500 bg-[#0c1324] ring-2 ring-cyan-500/5' : 'border-slate-800/80 hover:border-slate-700'
                     }`}
                   >
                     <div>
-                      <div className="flex justify-between items-start gap-2 mb-3">
+                      <div className="flex justify-between items-start gap-2 mb-2">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded transition-colors uppercase tracking-wide ${
                           isCardSelected ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-800 text-slate-400'
                         }`}>
@@ -253,13 +251,9 @@ export default function AssetsListPage() {
                         </span>
                       </div>
                       <h3 className="text-lg font-black text-white truncate">{asset.hostname || 'Sem Hostname'}</h3>
-                      <p className="text-xs text-slate-500 mt-1 font-medium truncate">
-                        {asset.fabricante && asset.fabricante !== '-' ? `${asset.fabricante} ` : ''}{asset.modelo || '-'}
-                      </p>
                     </div>
 
-                    {/* RODAPÉ DO ITEM COMPARTILHADO */}
-                    <div className="mt-4 pt-3 border-t border-slate-800/50 h-[38px] flex items-center">
+                    <div className="flex items-center h-[32px] w-full mt-auto">
                       {isCardSelected ? (
                         <div 
                           className="grid grid-cols-3 gap-1.5 w-full"
@@ -267,7 +261,7 @@ export default function AssetsListPage() {
                         >
                           <button
                             onClick={() => navigate(`/assets/${asset.id}`)}
-                            className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-[11px] font-bold uppercase transition"
+                            className="flex items-center justify-center gap-1 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-[11px] font-bold uppercase transition"
                           >
                             <Eye size={12} />
                             Ver
@@ -276,13 +270,13 @@ export default function AssetsListPage() {
                           {canEditAssets ? (
                             <button
                               onClick={() => navigate(`/assets/${asset.id}/edit`)}
-                              className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 text-[11px] font-bold uppercase transition"
+                              className="flex items-center justify-center gap-1 py-1 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 text-[11px] font-bold uppercase transition"
                             >
                               <Pencil size={11} />
                               Alt
                             </button>
                           ) : (
-                            <div className="py-1.5 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
+                            <div className="py-1 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
                               Lock
                             </div>
                           )}
@@ -290,13 +284,13 @@ export default function AssetsListPage() {
                           {canEditAssets ? (
                             <button
                               onClick={() => handleDelete(Number(asset.id), asset.hostname)}
-                              className="flex items-center justify-center gap-1 py-1.5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] font-bold uppercase transition"
+                              className="flex items-center justify-center gap-1 py-1 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] font-bold uppercase transition"
                             >
                               <Trash2 size={11} />
                               Del
                             </button>
                           ) : (
-                            <div className="py-1.5 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
+                            <div className="py-1 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[11px] font-bold uppercase text-center opacity-40 select-none">
                               Lock
                             </div>
                           )}
@@ -314,7 +308,7 @@ export default function AssetsListPage() {
             </div>
           )}
 
-          {/* 🔄 PAINEL DE PAGINAÇÃO: w-full e mt-8 garante que fique sempre no rodapé de forma fixa */}
+          {/* PAINEL DE PAGINAÇÃO */}
           <div className="mt-8 pt-4 border-t border-slate-900 flex justify-between items-center text-xs text-slate-400 w-full flex-shrink-0">
             <span>Página {currentPage} de {totalPages}</span>
             <div className="flex gap-2">

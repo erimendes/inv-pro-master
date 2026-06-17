@@ -12,6 +12,7 @@ const API_URL =
   'http://localhost:3000';
 
 export const assetsService = {
+  // 🟢 Restaurado com todas as linhas e corrigido para getAll exigido pelo formulário
   async getAll(): Promise<Asset[]> {
     const res = await fetch(
       `${API_URL}/assets`,

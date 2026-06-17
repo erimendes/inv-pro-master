@@ -34,23 +34,15 @@ export const ApplicationForm = () => {
   const [loadingData, setLoadingData] = useState<boolean>(isEdit); // Adicionado estado de carregamento
   const [saving, setSaving] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     const loadInitialData = async () => {
       // 💡 1. BUSCA E FILTRAGEM DE ATIVOS (Mostra apenas servidores)
       try {
-        let assets = [];
-        
-        if (assetsService && typeof assetsService.findAll === 'function') {
-          assets = await assetsService.findAll();
-        } else if (assetsService && typeof assetsService.getAll === 'function') {
-          assets = await (assetsService as any).getAll();
-        } else if (assetsService && typeof assetsService.list === 'function') {
-          assets = await (assetsService as any).list();
-        }
+        // Chamada direta e limpa para o getAll do seu serviço restaurado
+        const assets = await assetsService.getAll();
 
         // 💡 CORREÇÃO: Filtra os ativos para trazer apenas os tipos de servidor,
         // removendo LAPTOP e DESKTOP da listagem de vínculo.
-        // (Ajuste os nomes das strings se no seu enum do Prisma estiver diferente)
         const apenasServidores = assets.filter((asset: any) => 
           asset.tipo === 'SERVIDOR_FISICO' || 
           asset.tipo === 'SERVIDOR_VIRTUAL'
@@ -274,7 +266,6 @@ export const ApplicationForm = () => {
           </div>
 
           {/* SEÇÃO 5: ASSOCIAÇÃO DE SERVIDORES */}
-          {/* SEÇÃO 5: ASSOCIAÇÃO DE SERVIDORES */}
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest border-b border-slate-800/40 pb-1">5. Vincular Servidores (Ativos)</h2>
             <label className={labelClass}>Selecione os servidores onde esta aplicação está hospedada</label>
@@ -284,18 +275,13 @@ export const ApplicationForm = () => {
                 availableAssets.map((asset, index) => {
                   const isChecked = formData.servidoresIds?.includes(asset.id) || false;
 
-                  // 💡 DIAGNÓSTICO (Opcional): Mostra no console a estrutura do primeiro ativo para você descobrir o nome do campo de IP
                   if (index === 0) {
                     console.log("=== ESTRUTURA DO OBJETO ATIVO (SERVIDOR) ===", asset);
                   }
 
-                  // 💡 MAPEAMENTO INTELIGENTE: Tenta ler o IP de várias chaves comuns do mercado
-                  const serverIp = asset.ip || 
-                                   asset.ipRede || 
-                                   asset.ip_address || 
-                                   asset.enderecoIp || 
-                                   asset.host || 
-                                   'Sem IP';
+                  // 💡 SAFE CHECK: Garante que o ip extraído seja sempre um dado primitivo seguro (string)
+                  const rawIp = asset.ip || asset.ipRede || asset.ip_address || asset.enderecoIp || asset.host;
+                  const serverIp = (rawIp && typeof rawIp === 'string') ? rawIp : 'Sem IP';
 
                   return (
                     <label 
@@ -310,7 +296,6 @@ export const ApplicationForm = () => {
                       />
                       <div className="text-xs font-bold truncate">
                         {asset.hostname || 'Ativo sem nome'} 
-                        {/* Exibe o IP dinamicamente aqui */}
                         <span className="text-slate-500 block text-[10px] font-medium font-mono mt-0.5">
                           {serverIp}
                         </span>
