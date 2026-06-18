@@ -1,5 +1,4 @@
 // src/modulos/auth/pages/LoginPage.tsx
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,8 +18,11 @@ export default function LoginPage() {
     try {
       const isEmail = identifier.includes('@');
       
+      // 💡 CORREÇÃO AQUI: Montamos o objeto de forma estática e limpa.
+      // Se for e-mail, passamos a chave email. Se não, passamos username.
       await login({
-        [isEmail ? 'email' : 'username']: identifier,
+        email: isEmail ? identifier : undefined,
+        username: !isEmail ? identifier : undefined,
         password,
       });
 

@@ -5,19 +5,18 @@ import { PrismaClient, AtivoTipo } from "../generated/prisma/client";
 
 const filePath = path.resolve(__dirname, "data", "vms.csv");
 
+// 🌟 Typagem mapeada perfeitamente com o seu novo cabeçalho do CSV
 type VmCSV = {
+  hostnameServidor?: string;
   hardware?: string;
   hostname?: string;
   ipPrincipal?: string;
+  observacoes?: string;
   sistemaOperacional?: string;
-  apelido?: string;
-  patrimonio?: string;
-  serial?: string;
   cpu?: string;
-  ram?: string;
   armazenamento?: string;
+  ram?: string;
   isVirtualizado?: string;
-  hostHostname?: string;
 };
 
 const toStr = (v?: any) => {
@@ -44,11 +43,12 @@ function parseCsv(file: string): Promise<VmCSV[]> {
 }
 
 export async function seedVMs(prisma: PrismaClient) {
-  console.log("🖥️ Importando VMs...");
+  console.log("🖥️ Importando VMs e mapeando Hypervisors...");
   const rows = await parseCsv(filePath);
   
   let success = 0;
   let fail = 0;
+  let hypervisorsUpdated = 0;
 
   for (const row of rows) {
     const hostname = toStr(row.hostname);
@@ -58,58 +58,84 @@ export async function seedVMs(prisma: PrismaClient) {
     }
 
     try {
-      const hostHostnameStr = toStr(row.hostHostname);
+      const hostnameServidorStr = toStr(row.hostnameServidor);
+      const hardwareStr = toStr(row.hardware) || "";
       let hostIdValue: number | null = null;
 
-      if (hostHostnameStr) {
+      // 1. Amarração e Descoberta do Host Pai
+      if (hostnameServidorStr) {
         const host = await prisma.ativo.findUnique({
-          where: { hostname: hostHostnameStr },
+          where: { hostname: hostnameServidorStr },
           select: { id: true, tipo: true },
         });
 
         if (!host) {
-          console.warn(`⚠️ Host [${hostHostnameStr}] não encontrado.`);
+          console.warn(`⚠️ Host Pai [${hostnameServidorStr}] especificado no CSV não foi encontrado no banco.`);
         } else {
           hostIdValue = host.id;
+
+          // Se o campo hardware indicar Hyper-V, atualiza a tecnologia do pai
+          if (hardwareStr.toLowerCase().includes("hyper-v")) {
+            await prisma.ativo.update({
+              where: { id: host.id },
+              data: { hypervisor: "HYPERV" },
+            });
+            console.log(`🛡️ Host Pai [${hostnameServidorStr}] atualizado para hypervisor: HYPERV`);
+            hypervisorsUpdated++;
+          }
         }
       }
+
+      // 2. Criação do patrimônio virtualizado e higienização dos dados de VM
+      const patrimonioVirtual = `VM-${hostname}`;
 
       await prisma.ativo.upsert({
         where: { hostname },
         update: {
-          hardware: toStr(row.hardware),
+          hardware: hardwareStr || "Virtualizado",
           ipPrincipal: toStr(row.ipPrincipal),
           tipo: AtivoTipo.SERVIDOR_VIRTUAL,
+          sistemaOperacional: toStr(row.sistemaOperacional),
+          observacoes: toStr(row.observacoes),
+          cpu: toStr(row.cpu),
+          ram: toStr(row.ram),
+          armazenamento: toStr(row.armazenamento),
+          isVirtualizado: toBool(row.isVirtualizado) || true, // VMs são sempre virtualizadas
+          hostFisicoId: hostIdValue,
+          
+          // Alinhamento com as novas regras de negócio do frontend para VMs:
           tamanhoU: 0,                      
           posicaoRack: null,                
           rackId: null,                     
-          sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido),
-          patrimonio: toStr(row.patrimonio),
-          serial: toStr(row.serial),
-          cpu: toStr(row.cpu),
-          ram: toStr(row.ram),
-          armazenamento: toStr(row.armazenamento),
-          isVirtualizado: toBool(row.isVirtualizado),
-          // AQUI ESTÁ A CHAVE: Usamos a Foreign Key direta, NUNCA o objeto 'host'
-          hostFisicoId: hostIdValue, 
+          fabricante: "Virtual",
+          modelo: "Virtual Machine",
+          serial: null,
+          valor: 0,
+          dataCompra: null,
         },
         create: {
           hostname,
-          hardware: toStr(row.hardware),
+          patrimonio: patrimonioVirtual,
+          hardware: hardwareStr || "Virtualizado",
           ipPrincipal: toStr(row.ipPrincipal),
           tipo: AtivoTipo.SERVIDOR_VIRTUAL, 
-          tamanhoU: 0,
-          posicaoRack: null,
           sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido),
-          patrimonio: toStr(row.patrimonio),
-          serial: toStr(row.serial),
+          observacoes: toStr(row.observacoes),
           cpu: toStr(row.cpu),
           ram: toStr(row.ram),
           armazenamento: toStr(row.armazenamento),
-          isVirtualizado: toBool(row.isVirtualizado),
+          isVirtualizado: toBool(row.isVirtualizado) || true,
           hostFisicoId: hostIdValue,
+          
+          // Alinhamento com as novas regras de negócio do frontend para VMs:
+          tamanhoU: 0,
+          posicaoRack: null,
+          rackId: null,
+          fabricante: "Virtual",
+          modelo: "Virtual Machine",
+          serial: null,
+          valor: 0,
+          dataCompra: null,
         },
       });
 
@@ -120,6 +146,11 @@ export async function seedVMs(prisma: PrismaClient) {
     }
   }
 
-  if (fail > 0) throw new Error(`Seed VMs falhou com ${fail} erros`);
-  console.log(`🏁 VMs: ${success} sucessos`);
+  console.log(`\n🏁 --- RESUMO DA CARGA ---`);
+  console.log(`✅ VMs processadas com sucesso: ${success}`);
+  console.log(`🛡️ Hosts físicos marcados como HYPERV: ${hypervisorsUpdated}`);
+  if (fail > 0) {
+    console.warn(`⚠️ Houve ${fail} falha(s) durante o processo.`);
+    throw new Error(`Seed VMs finalizou com erros pendentes.`);
+  }
 }

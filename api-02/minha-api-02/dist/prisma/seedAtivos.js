@@ -8,7 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const csv_parser_1 = __importDefault(require("csv-parser"));
 const client_1 = require("../generated/prisma/client");
 const path_1 = __importDefault(require("path"));
-const filePath = path_1.default.resolve(__dirname, "data", "seus_ativos.csv");
+const filePath = path_1.default.resolve(__dirname, "data", "ativos.csv");
 const toStr = (v) => {
     const s = String(v || "").trim();
     return s === "" ? null : s;

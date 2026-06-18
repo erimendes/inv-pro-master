@@ -15,14 +15,12 @@ import { assetsService } from '../services/assets.service';
 import { useAuth } from '../../auth/context/AuthContext'; 
 import { canModifyModule } from '../../../shared/constants/roles';
 
-// Importação dos componentes isolados
-import { SectionCard, DetailItem } from '../components/AssetDetailsComponents';
-
 export default function AssetDetailsPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user: currentUser } = useAuth();
 
+  // 🛡️ Validação de privilégios de gravação/edição central do app
   const canEditAssets = useMemo(() => {
     return canModifyModule(currentUser?.role, 'assets');
   }, [currentUser]);
@@ -30,6 +28,8 @@ export default function AssetDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [asset, setAsset] = useState<any | null>(null);
+  
+  // Estado complementar para o Host Pai tipado flexivelmente
   const [fetchedHostFisico, setFetchedHostFisico] = useState<any | null>(null);
 
   useEffect(() => {
@@ -41,11 +41,13 @@ export default function AssetDetailsPage() {
         }
 
         setLoading(true);
+        // 🌟 CORREÇÃO: Passando o 'id' como String diretamente para o serviço
         const assetResponse = await assetsService.getById(String(id));
         setAsset(assetResponse);
 
         const currentAsset = assetResponse as any;
 
+        // 🌟 CORREÇÃO: Passando o 'hostFisicoId' convertido para String para o serviço
         if (currentAsset?.tipo === 'SERVIDOR_VIRTUAL' && !currentAsset?.hostFisico && currentAsset?.hostFisicoId) {
           try {
             const hostResponse = await assetsService.getById(String(currentAsset.hostFisicoId));
@@ -61,19 +63,13 @@ export default function AssetDetailsPage() {
         console.error(error);
         setErrorMessage('Erro ao carregar ativo.');
       } finally {
-        loading && setLoading(false);
+        setLoading(false);
       }
     }
 
     loadAssetAndRelations();
   }, [id]);
 
-  // Flag utilitária para checar se o ativo atual é Servidor Virtual
-  const isVM = asset?.tipo === 'SERVIDOR_VIRTUAL';
-
-  /* ========================================================= */
-  /* FORMATAÇÕES AUXILIARES */
-  /* ========================================================= */
   function formatDate(value?: string | Date | null) {
     if (!value) return '-';
     return new Date(value).toLocaleDateString('pt-BR');
@@ -87,6 +83,7 @@ export default function AssetDetailsPage() {
     }).format(value);
   }
 
+  // Traduz o Enum HypervisorTipo enviado pelo Prisma para exibição limpa na tela
   function formatHypervisor(tipo?: string | null) {
     if (!tipo) return '-';
     const mapeamento: Record<string, string> = {
@@ -99,6 +96,7 @@ export default function AssetDetailsPage() {
     return mapeamento[tipo.toUpperCase()] || tipo;
   }
 
+  // Determina a cor visual baseada no Enum de PowerState do Prisma (ON, OFF, PAUSED, SUSPENDED)
   function getPowerStateBadge(state?: string) {
     const normalState = (state || '').toUpperCase();
     if (normalState === 'ON') return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
@@ -114,12 +112,20 @@ export default function AssetDetailsPage() {
     );
   }
 
-  if (errorMessage || !asset) {
+  if (errorMessage) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070a13] p-6">
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-5 text-red-300 max-w-md text-center">
-          {errorMessage ? `⚠️ ${errorMessage}` : 'Ativo não encontrado.'}
+          ⚠️ {errorMessage}
         </div>
+      </div>
+    );
+  }
+
+  if (!asset) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070a13] text-white">
+        Ativo não encontrado.
       </div>
     );
   }
@@ -166,7 +172,7 @@ export default function AssetDetailsPage() {
           </div>
         </div>
 
-        {/* SEÇÃO: MÁQUINAS VIRTUAIS HOSPEDADAS (Apenas se houver filhos) */}
+        {/* SEÇÃO: MÁQUINAS VIRTUAIS HOSPEDADAS */}
         {asset.vms && asset.vms.length > 0 && (
           <section className="mb-8 rounded-2xl border border-cyan-500/20 bg-[#0a0f1d] p-6 shadow-2xl">
             <div className="mb-6 flex items-center gap-3">
@@ -195,6 +201,7 @@ export default function AssetDetailsPage() {
                           {vm.sistemaOperacional || 'Sistema Operacional não mapeado'}
                         </p>
                       </div>
+                      
                       <span className={`rounded-lg border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${getPowerStateBadge(vm.powerState)}`}>
                         {vm.powerState || 'VM'}
                       </span>
@@ -224,7 +231,7 @@ export default function AssetDetailsPage() {
                     onClick={() => navigate(`/assets/${vm.id}`)}
                     className="mt-5 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-400 transition hover:border-cyan-500/40 hover:bg-slate-900 hover:text-white"
                   >
-                    Abrir Panel da VM
+                    Abrir Painel da VM
                   </button>
                 </div>
               ))}
@@ -232,24 +239,17 @@ export default function AssetDetailsPage() {
           </section>
         )}
 
-        {/* IDENTIFICAÇÃO PATRIMONIAL */}
-        <SectionCard title="Identificação Geral" icon={<Monitor size={20} />}>
+        {/* IDENTIFICAÇÃO FÍSICA E PATRIMONIAL */}
+        <SectionCard title="Identificação Patrimonial" icon={<Monitor size={20} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DetailItem label="ID Registro" value={asset.id} />
+            <DetailItem label="Código de Patrimônio" value={asset.patrimonio} />
             <DetailItem label="Hostname" value={asset.hostname} />
             <DetailItem label="Tag / Apelido" value={asset.apelido} />
+            <DetailItem label="Fabricante" value={asset.fabricante} />
             <DetailItem label="Família de Hardware" value={asset.hardware} />
-            
-            {/* 🌟 SE FOR VM, NÃO EXIBE FABRICANTE, MODELO COMERCIAL E SERIAL */}
-            {!isVM && (
-              <>
-                <DetailItem label="Código de Patrimônio" value={asset.patrimonio} />
-                <DetailItem label="Fabricante" value={asset.fabricante} />
-                <DetailItem label="Modelo Comercial" value={asset.modelo} />
-                <DetailItem label="Número de Série" value={asset.serial} />
-              </>
-            )}
-
+            <DetailItem label="Modelo Comercial" value={asset.modelo} />
+            <DetailItem label="Número de Série" value={asset.serial} />
             {asset.hypervisor && (
               <DetailItem label="Mecanismo de Virtualização" value={formatHypervisor(asset.hypervisor)} />
             )}
@@ -268,7 +268,7 @@ export default function AssetDetailsPage() {
           </div>
         </SectionCard>
 
-        {/* SERVIDOR HOSPEDEIRO RELACIONADO (Exclusivo de VMs) */}
+        {/* SERVIDOR HOSPEDEIRO RELACIONADO */}
         {fetchedHostFisico && (
           <SectionCard title="Servidor Hospedeiro (Host Pai)" icon={<Cpu size={20} />}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -288,26 +288,22 @@ export default function AssetDetailsPage() {
           </SectionCard>
         )}
 
-        {/* 🌟 SE FOR VM, NÃO MOSTRA A DISTRIBUIÇÃO EM RACK */}
-        {!isVM && (
-          <SectionCard title="Distribuição em Rack" icon={<HardDrive size={20} />}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <DetailItem label="Unidade Identificadora do Rack" value={asset.rack?.nome} />
-              <DetailItem label="Posição de Origem" value={asset.posicaoRack ? `${asset.posicaoRack}U` : '-'} />
-              <DetailItem label="Tamanho Ocupado" value={asset.tamanhoU ? `${asset.tamanhoU}U` : '-'} />
-            </div>
-          </SectionCard>
-        )}
+        {/* ALOCAÇÃO FÍSICA NO DATACENTER */}
+        <SectionCard title="Distribuição em Rack" icon={<HardDrive size={20} />}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <DetailItem label="Unidade Identificadora do Rack" value={asset.rack?.nome} />
+            <DetailItem label="Posição de Origem" value={asset.posicaoRack ? `${asset.posicaoRack}U` : '-'} />
+            <DetailItem label="Tamanho Ocupado" value={asset.tamanhoU ? `${asset.tamanhoU}U` : '-'} />
+          </div>
+        </SectionCard>
 
-        {/* 🌟 SE FOR VM, NÃO MOSTRA OS DADOS DE AQUISIÇÃO E CUSTOS */}
-        {!isVM && (
-          <SectionCard title="Dados de Aquisição e Custos" icon={<Monitor size={20} />}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <DetailItem label="Data de Compra" value={formatDate(asset.dataCompra)} />
-              <DetailItem label="Custo Contábil" value={formatCurrency(asset.valor ? Number(asset.valor) : null)} />
-            </div>
-          </SectionCard>
-        )}
+        {/* METADADOS CONTÁBEIS */}
+        <SectionCard title="Dados de Aquisição e Custos" icon={<Monitor size={20} />}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <DetailItem label="Data de Compra" value={formatDate(asset.dataCompra)} />
+            <DetailItem label="Custo Contábil" value={formatCurrency(asset.valor ? Number(asset.valor) : null)} />
+          </div>
+        </SectionCard>
 
         {/* OBSERVAÇÕES INTERNAS */}
         <SectionCard title="Anotações e Observações Gerais" icon={<Monitor size={20} />}>
@@ -317,6 +313,29 @@ export default function AssetDetailsPage() {
         </SectionCard>
 
       </div>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="mb-8 rounded-2xl border border-slate-800/80 bg-[#0a0f1d] p-6 shadow-2xl">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400 border border-emerald-500/20">{icon}</div>
+        <h2 className="text-2xl font-black uppercase tracking-tight text-white">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value?: any }) {
+  return (
+    <div className="rounded-xl border border-slate-800/60 bg-[#111625] p-4">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="break-words text-sm font-semibold text-white">
+        {value !== null && value !== undefined && value !== '' ? String(value) : '-'}
+      </p>
     </div>
   );
 }

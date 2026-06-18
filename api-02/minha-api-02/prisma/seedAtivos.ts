@@ -3,7 +3,7 @@ import csv from "csv-parser";
 import { PrismaClient, AtivoTipo } from "../generated/prisma/client";
 import path from "path";
 
-const filePath = path.resolve(__dirname, "data", "seus_ativos.csv");
+const filePath = path.resolve(__dirname, "data", "ativos.csv");
 
 // ---------- TYPES ----------
 type AtivoCSV = {

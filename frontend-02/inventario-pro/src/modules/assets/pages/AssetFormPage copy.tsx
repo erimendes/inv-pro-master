@@ -8,9 +8,6 @@ import { racksService } from '../../racks/services/racks.service';
 import type { Asset } from '../types/asset.types';
 import { useNotification } from '../../../app/providers/NotificationProvider';
 
-// Importa os componentes isolados
-import { Section, Grid, Input, NumberInput, Checkbox, SelectField } from '../components/FormComponents';
-
 type Rack = {
   id: string;
   nome: string;
@@ -29,6 +26,7 @@ export default function AssetFormPage() {
   const [physicalHosts, setPhysicalHosts] = useState<Asset[]>([]);
   const [racks, setRacks] = useState<Rack[]>([]);
   
+  // Controlam a listagem e seleção de VMs filhas
   const [availableVms, setAvailableVms] = useState<Asset[]>([]);
   const [selectedVmIds, setSelectedVmIds] = useState<number[]>([]);
 
@@ -61,25 +59,24 @@ export default function AssetFormPage() {
     tamanhoU: undefined,
   });
 
-  // Flag utilitária para saber se o ativo atual selecionado no form é uma Máquina Virtual
-  const isVM = form.tipo === 'SERVIDOR_VIRTUAL';
-
   /* ========================================================= */
-  /* 1. CARREGA LISTA GLOBAL DE ATIVOS */
+  /* 1. CARREGA LISTA GLOBAL DE ATIVOS (HOSTS E VMs DISPONÍVEIS) */
   /* ========================================================= */
   useEffect(() => {
     async function loadAllAssets() {
       try {
         const assets = await assetsService.getAll();
         
+        // Separa os servidores físicos do inventário
         const hosts = assets.filter((a: Asset) => a.tipo === 'SERVIDOR_FISICO');
         setPhysicalHosts(hosts);
 
+        // Separa as VMs livres ou que já pertencem a este host atual
         const vms = assets.filter((a: Asset) => {
-          const isAssetVM = a.tipo === 'SERVIDOR_VIRTUAL';
+          const isVM = a.tipo === 'SERVIDOR_VIRTUAL';
           const isOrphan = !a.hostFisicoId;
           const belongsToMe = id ? a.hostFisicoId === Number(id) : false;
-          return isAssetVM && (isOrphan || belongsToMe);
+          return isVM && (isOrphan || belongsToMe);
         });
         setAvailableVms(vms);
       } catch (error) {
@@ -90,7 +87,7 @@ export default function AssetFormPage() {
   }, [id]);
 
   /* ========================================================= */
-  /* 2. CARREGA ATIVO ATUAL PARA EDIÇÃO */
+  /* 2. CARREGA ATIVO ATUAL PARA EDIÇÃO (COM CORREÇÃO DE HERANÇA) */
   /* ========================================================= */
   useEffect(() => {
     async function loadAsset() {
@@ -98,8 +95,11 @@ export default function AssetFormPage() {
         if (!id) return;
 
         const asset = await assetsService.getById(Number(id));
+        
+        // Define o hypervisor base do ativo
         let hypervisorDefinido = asset.hypervisor || '';
         
+        // Se for um servidor virtual, busca dinamicamente o hypervisor do pai (hostFisico)
         if (asset.tipo === 'SERVIDOR_VIRTUAL' && asset.hostFisico) {
           hypervisorDefinido = asset.hostFisico.hypervisor || '';
         }
@@ -109,6 +109,7 @@ export default function AssetFormPage() {
           hypervisor: hypervisorDefinido,
         });
 
+        // Se for um servidor físico, mapeia as VMs dependentes
         if (asset.tipo === 'SERVIDOR_FISICO' && asset.vms) {
           const idsExistentes = asset.vms.map((vm: any) => Number(vm.id));
           setSelectedVmIds(idsExistentes);
@@ -147,25 +148,17 @@ export default function AssetFormPage() {
 
   function handleTipoChange(novoTipo: Asset['tipo']) {
     setForm((prev) => {
-      const targetIsVM = novoTipo === 'SERVIDOR_VIRTUAL';
-      const targetIsHost = novoTipo === 'SERVIDOR_FISICO';
+      const isVM = novoTipo === 'SERVIDOR_VIRTUAL';
+      const isHost = novoTipo === 'SERVIDOR_FISICO';
       return {
         ...prev,
         tipo: novoTipo,
-        isVirtualizado: targetIsVM ? true : prev.isVirtualizado,
-        hypervisor: targetIsHost ? prev.hypervisor : '',
-        
-        // 🌟 Se virou VM, limpa na árvore do estado os campos de rack e dados físicos
-        rackId: targetIsVM ? undefined : prev.rackId,
-        posicaoRack: targetIsVM ? undefined : prev.posicaoRack,
-        tamanhoU: targetIsVM ? undefined : prev.tamanhoU,
-        fabricante: targetIsVM ? 'VIRTUAL' : prev.fabricante, // Evita quebrar validação de string obrigatória no backend
-        modelo: targetIsVM ? 'VIRTUAL_MACHINE' : prev.modelo, 
-        serial: targetIsVM ? '' : prev.serial,
-        valor: targetIsVM ? 0 : prev.valor,
-        dataCompra: targetIsVM ? undefined : prev.dataCompra,
-        
-        hostFisicoId: targetIsHost ? undefined : prev.hostFisicoId,
+        isVirtualizado: isVM ? true : prev.isVirtualizado,
+        hypervisor: isHost ? prev.hypervisor : '',
+        rackId: isVM ? undefined : prev.rackId,
+        posicaoRack: isVM ? undefined : prev.posicaoRack,
+        tamanhoU: isVM ? undefined : prev.tamanhoU,
+        hostFisicoId: isHost ? undefined : prev.hostFisicoId,
       };
     });
   }
@@ -183,8 +176,13 @@ export default function AssetFormPage() {
     setErrorMessage('');
 
     try {
-      const payload: any = {
+      const payload = {
+        patrimonio: form.patrimonio?.trim() || null,
         tipo: form.tipo,
+        fabricante: form.fabricante?.trim() || null,
+        hardware: form.hardware?.trim() || null,
+        modelo: form.modelo?.trim() || null,
+        serial: form.serial?.trim() || null,
         hostname: form.hostname?.trim() || null,
         apelido: form.apelido?.trim() || null,
         ipPrincipal: form.ipPrincipal?.trim() || null,
@@ -195,49 +193,29 @@ export default function AssetFormPage() {
         armazenamento: form.armazenamento?.trim() || null,
         status: form.status,
         emUso: form.emUso ?? true,
-        observacoes: form.observacoes?.trim() || null,
-        isVirtualizado: isVM ? true : (form.isVirtualizado ?? false),
-        hostFisicoId: isVM && form.hostFisicoId ? Number(form.hostFisicoId) : null,
+        dataCompra: form.dataCompra ? new Date(form.dataCompra) : null,
+        valor: Number(form.valor || 0),
+        isVirtualizado: form.isVirtualizado ?? false,
+        
+        // Apenas salva a string do Hypervisor se for o próprio Host Físico
+        hypervisor: form.tipo === 'SERVIDOR_FISICO' && form.hypervisor ? form.hypervisor : null,
+        
+        hostFisicoId: form.hostFisicoId ? Number(form.hostFisicoId) : null,
         userId: form.userId ? Number(form.userId) : null,
+        rackId: form.rackId || null,
+        observacoes: form.observacoes?.trim() || null,
+        posicaoRack: form.posicaoRack ? Number(form.posicaoRack) : null,
+        tamanhoU: form.tamanhoU ? Number(form.tamanhoU) : null,
         vmsIds: form.tipo === 'SERVIDOR_FISICO' ? selectedVmIds : [],
       };
 
-      // 🌟 CONDICIONAL DE COLETA DE DADOS BASEADA NO TIPO
-      if (isVM) {
-        // Se for Máquina Virtual, força campos físicos/financeiros padrão para o backend
-        payload.patrimonio = `VM-${form.hostname?.trim() || Date.now()}`; // Gera um patrimônio virtual autônomo
-        payload.fabricante = "Virtual";
-        payload.modelo = "Virtual Machine";
-        payload.hardware = form.hardware?.trim() || "Virtualizado";
-        payload.serial = null;
-        payload.valor = 0;
-        payload.dataCompra = null;
-        payload.rackId = null;
-        payload.posicaoRack = null;
-        payload.tamanhoU = 0;
-        payload.hypervisor = null;
-      } else {
-        // Se for ativo físico tradicional, coleta os campos do formulário normalmente
-        payload.patrimonio = form.patrimonio?.trim() || null;
-        payload.fabricante = form.fabricante?.trim() || null;
-        payload.modelo = form.modelo?.trim() || null;
-        payload.hardware = form.hardware?.trim() || null;
-        payload.serial = form.serial?.trim() || null;
-        payload.valor = Number(form.valor || 0);
-        payload.dataCompra = form.dataCompra ? new Date(form.dataCompra) : null;
-        payload.rackId = form.rackId || null;
-        payload.posicaoRack = form.posicaoRack ? Number(form.posicaoRack) : null;
-        payload.tamanhoU = form.tamanhoU ? Number(form.tamanhoU) : null;
-        payload.hypervisor = form.tipo === 'SERVIDOR_FISICO' && form.hypervisor ? form.hypervisor : null;
-      }
-
-      if (!payload.patrimonio || !payload.tipo || !payload.status) {
-        throw new Error('Preencha os campos de identificação obrigatórios.');
+      if (!payload.patrimonio || !payload.fabricante || !payload.modelo || !payload.tipo || !payload.status) {
+        throw new Error('Preencha todos os campos obrigatórios (*)');
       }
 
       if (id) {
         await assetsService.update(Number(id), payload);
-        notify('Ativo atualizado com sucesso!', 'success');
+        notify('Ativo updated successfully!', 'success');
       } else {
         await assetsService.create(payload);
         notify('Ativo criado com sucesso!', 'success');
@@ -246,7 +224,9 @@ export default function AssetFormPage() {
       navigate(backUrl);
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err?.response?.data?.message || err?.message || 'Erro ao salvar ativo');
+      setErrorMessage(
+        err?.response?.data?.message || err?.message || 'Erro ao salvar ativo'
+      );
       notify('Erro ao salvar ativo', 'error');
     } finally {
       setLoading(false);
@@ -256,12 +236,11 @@ export default function AssetFormPage() {
   return (
     <div className="min-h-screen bg-slate-950 p-6 text-white">
       <div className="mx-auto max-w-7xl">
-        
         {/* HEADER */}
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">{id ? 'Editar Ativo' : 'Novo Ativo'}</h1>
-            <p className="mt-2 text-sm text-slate-400">Gerenciamento de ativos físicos e instâncias virtualizadas</p>
+            <p className="mt-2 text-sm text-slate-400">Gerenciamento completo e topologia do ativo</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -291,9 +270,17 @@ export default function AssetFormPage() {
 
         <form id="asset-form" onSubmit={handleSubmit} className="space-y-8">
           
-          {/* SEÇÃO 1: IDENTIFICAÇÃO (Campos dinâmicos se for VM) */}
-          <Section title="Identificação Geral">
+          {/* IDENTIFICAÇÃO */}
+          <Section title="Identificação Patrimonial">
             <Grid>
+              <Input label="Patrimônio *" value={form.patrimonio} onChange={(v) => updateField('patrimonio', v)} />
+              <Input label="Hostname" value={form.hostname} onChange={(v) => updateField('hostname', v)} />
+              <Input label="Apelido / Tag" value={form.apelido} onChange={(v) => updateField('apelido', v)} />
+              <Input label="Fabricante *" value={form.fabricante} onChange={(v) => updateField('fabricante', v)} />
+              <Input label="Família do Hardware" value={form.hardware} onChange={(v) => updateField('hardware', v)} />
+              <Input label="Modelo Comercial *" value={form.modelo} onChange={(v) => updateField('modelo', v)} />
+              <Input label="Número de Série" value={form.serial} onChange={(v) => updateField('serial', v)} />
+              
               <SelectField
                 label="Tipo de Ativo *"
                 value={form.tipo ?? 'LAPTOP'}
@@ -322,20 +309,6 @@ export default function AssetFormPage() {
                 ]}
               />
 
-              <Input label="Hostname / Nome da Máquina" value={form.hostname} onChange={(v) => updateField('hostname', v)} />
-              <Input label="Apelido / Tag de Identificação" value={form.apelido} onChange={(v) => updateField('apelido', v)} />
-              <Input label="Família ou Cluster de Hardware" value={form.hardware} onChange={(v) => updateField('hardware', v)} />
-
-              {/* 🌟 OCULTA CAMPOS SE FOR MÁQUINA VIRTUAL */}
-              {!isVM && (
-                <>
-                  <Input label="Patrimônio Corporativo *" value={form.patrimonio} onChange={(v) => updateField('patrimonio', v)} />
-                  <Input label="Fabricante OEM *" value={form.fabricante} onChange={(v) => updateField('fabricante', v)} />
-                  <Input label="Modelo Comercial *" value={form.modelo} onChange={(v) => updateField('modelo', v)} />
-                  <Input label="Número de Série (Serial) " value={form.serial} onChange={(v) => updateField('serial', v)} />
-                </>
-              )}
-
               {form.tipo === 'SERVIDOR_FISICO' && (
                 <SelectField
                   label="Tecnologia Hypervisor (Virtualizador) *"
@@ -354,9 +327,9 @@ export default function AssetFormPage() {
             </Grid>
           </Section>
 
-          {/* SEÇÃO 2: INFRAESTRUTURA DE RACK (Ocultado Completamente para VMs) */}
-          {!isVM && (
-            <Section title="Localização no Datacenter & Rack">
+          {/* LOCALIZAÇÃO */}
+          {form.tipo !== 'SERVIDOR_VIRTUAL' && (
+            <Section title="Localização & Rack">
               <Grid>
                 <SelectField
                   label="Alocação de Rack"
@@ -373,31 +346,30 @@ export default function AssetFormPage() {
             </Section>
           )}
 
-          {/* SEÇÃO 3: RECURSOS LÓGICOS (Visível para todos) */}
-          <Section title="Capacidade Lógica e Rede">
+          {/* REDE E RECURSOS */}
+          <Section title="Rede & Capacidade Lógica">
             <Grid>
               <Input label="Endereço IP Principal" value={form.ipPrincipal} onChange={(v) => updateField('ipPrincipal', v)} />
+              <Input label="Descrição do Escopo" value={form.descricao} onChange={(v) => updateField('descricao', v)} />
               <Input label="Sistema Operacional" value={form.sistemaOperacional} onChange={(v) => updateField('sistemaOperacional', v)} />
               <Input label="Especificação de CPU" value={form.cpu} onChange={(v) => updateField('cpu', v)} />
               <Input label="Volumetria RAM" value={form.ram} onChange={(v) => updateField('ram', v)} />
-              <Input label="Armazenamento total alocado" value={form.armazenamento} onChange={(v) => updateField('armazenamento', v)} />
-              <Input label="Descrição do Escopo / Função" value={form.descricao} onChange={(v) => updateField('descricao', v)} />
+              <Input label="Armazenamento / Disco" value={form.armazenamento} onChange={(v) => updateField('armazenamento', v)} />
             </Grid>
           </Section>
 
-          {/* SEÇÃO 4: HIERARQUIA DE VIRTUALIZAÇÃO */}
-          <Section title="Estratégia de Infraestrutura & Vínculos">
+          {/* STRATEGY VIRTUALIZATION */}
+          <Section title="Estratégia de Virtualização & Hierarquia">
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Checkbox label="Ativo em Produção / Operacional" checked={form.emUso ?? false} onChange={(v) => updateField('emUso', v)} />
-                <Checkbox label="Este ativo hospeda virtualização?" disabled={isVM} checked={isVM ? true : (form.isVirtualizado ?? false)} onChange={(v) => updateField('isVirtualizado', v)} />
+                <Checkbox label="Ativo em Produção / Uso" checked={form.emUso ?? false} onChange={(v) => updateField('emUso', v)} />
+                <Checkbox label="Este ativo é virtualizado?" disabled={form.tipo === 'SERVIDOR_VIRTUAL'} checked={form.isVirtualizado ?? false} onChange={(v) => updateField('isVirtualizado', v)} />
               </div>
 
-              {/* Se for uma VM, exige a seleção do Host Pai onde reside */}
-              {isVM && (
+              {(form.isVirtualizado || form.tipo === 'SERVIDOR_VIRTUAL') && (
                 <div className="max-w-md">
                   <SelectField
-                    label="Servidor Host Hospedeiro (Pai) *"
+                    label="Servidor Host Hospedeiro (Hypervisor) *"
                     value={form.hostFisicoId ? String(form.hostFisicoId) : ''}
                     onChange={(v) => updateField('hostFisicoId', (v ? Number(v) : undefined) as any)}
                     options={[
@@ -411,17 +383,16 @@ export default function AssetFormPage() {
                 </div>
               )}
 
-              {/* Se for um Servidor Físico, permite acoplar várias VMs nele */}
               {form.tipo === 'SERVIDOR_FISICO' && (
                 <div className="border-t border-slate-800 pt-4">
                   <label className="block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide">
-                    Vincular Máquinas Virtuais Dependentes
+                    Vincular Máquinas Virtuais a este Host Físico
                   </label>
-                  <p className="text-xs text-slate-500 mb-4">Selecione as instâncias virtuais do inventário criadas dentro deste nó:</p>
+                  <p className="text-xs text-slate-500 mb-4">Selecione abaixo as VMs do inventário que rodam dentro deste servidor:</p>
                   
                   {availableVms.length === 0 ? (
                     <div className="text-xs p-4 text-center rounded-lg border border-dashed border-slate-800 text-slate-600 bg-slate-950/40">
-                      Nenhuma máquina virtual disponível ou órfã encontrada para alocação.
+                      Nenhuma máquina virtual disponível ou órfã encontrada no inventário para alocação.
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -453,11 +424,11 @@ export default function AssetFormPage() {
             </div>
           </Section>
 
-          {/* ANOTAÇÕES */}
-          <Section title="Anotações Gerais / Logs de Alteração">
+          {/* OBSERVAÇÕES */}
+          <Section title="Anotações Gerais / Observações">
             <textarea
               rows={4}
-              placeholder="Notas de manutenção, histórico de chamados ou observações de sysadmin..."
+              placeholder="Digite detalhes técnicos extras..."
               value={form.observacoes ?? ''}
               onChange={(e) => updateField('observacoes', e.target.value as any)}
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white text-sm outline-none transition focus:border-blue-500"
@@ -465,6 +436,84 @@ export default function AssetFormPage() {
           </Section>
         </form>
       </div>
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* COMPONENTES COMPILADOS INTERNOS DO ARQUIVO */
+/* ========================================================= */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-md">
+      <h2 className="mb-6 text-lg font-bold text-slate-200 border-b border-slate-800 pb-2">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Grid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">{children}</div>;
+}
+
+function Input({ label, value, onChange }: { label: string; value?: string; onChange: (value: string) => void }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</label>
+      <input
+        type="text"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition focus:border-blue-500"
+      />
+    </div>
+  );
+}
+
+function NumberInput({ label, value, onChange }: { label: string; value?: number; onChange: (value: number | undefined) => void }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</label>
+      <input
+        type="number"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition focus:border-blue-500"
+      />
+    </div>
+  );
+}
+
+function Checkbox({ label, checked, onChange, disabled = false }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-3 rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-300 select-none w-full ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:border-slate-700'}`}>
+      <input
+        type="checkbox"
+        disabled={disabled}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer disabled:cursor-not-allowed"
+      />
+      {label}
+    </label>
+  );
+}
+
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition focus:border-blue-500 cursor-pointer"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value} className="bg-slate-950">
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

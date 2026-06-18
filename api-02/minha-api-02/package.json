@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "prisma:seed-vms": "tsx prisma/seedVMs.ts",
     "db:create": "ts-node scripts/sync-criar-banco.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -43,6 +44,7 @@
     "pg": "^8.21.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.22.4"
   },
   "devDependencies": {
@@ -68,7 +70,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "overrides": {
-    "glob": "^11.0.0",
+    "glob": "^13.0.6",
     "test-exclude": "^7.0.0"
   },
   "jest": {
@@ -87,5 +89,13 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "allowScripts": {
+    "@prisma/engines@7.8.0": true,
+    "@scarf/scarf@1.4.0": true,
+    "argon2@0.44.0": true,
+    "esbuild@0.28.1": true,
+    "prisma@7.8.0": true,
+    "unrs-resolver@1.12.2": true
   }
 }

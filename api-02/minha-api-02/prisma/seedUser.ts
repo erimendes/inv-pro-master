@@ -31,7 +31,7 @@ export async function seedUser(
       username: 'admin',
       name: 'Administrador',
       email: 'admin@empresa.com',
-      password: 'Admin@123',
+      password: '123456',
       role: Role.ADMIN,
     },
   ];

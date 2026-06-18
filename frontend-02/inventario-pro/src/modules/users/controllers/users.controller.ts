@@ -7,7 +7,7 @@ import { usersService }
 from '../services/users.service';
 
 import type { User }
-from '../types/user.types';
+from '../types/users.types';
 
 export function useUsersController() {
   const [loading, setLoading] =

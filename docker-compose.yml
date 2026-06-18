@@ -1,0 +1,14 @@
+services:
+  # Serviço da API
+  api:
+    build: ./api-02
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      - NODE_ENV=production
+
+  # Serviço do Frontend
+  frontend:
+    build: ./frontend-02
+    ports:
+      - "0.0.0.0:5173:8080"

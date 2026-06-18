@@ -57,7 +57,7 @@ async function seedUser(prisma) {
             username: 'admin',
             name: 'Administrador',
             email: 'admin@empresa.com',
-            password: 'Admin@123',
+            password: '123456',
             role: client_1.Role.ADMIN,
         },
     ];
