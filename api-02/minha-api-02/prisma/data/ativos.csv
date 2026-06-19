@@ -1,1 +1,2 @@
-rack;hardware;hostname;ipPrincipal;sistemaOperacional;oQueRoda;apelido;patrimonio;serial;cpu;ram;armazenamento;observacoes
+rack;posicaoRack;tamanhoU;hardware;hostname;tipo;ipPrincipal;sistemaOperacional;oQueRoda;patrimonio;serial;cpu;ram;armazenamento;observacoes;isVirtualizado
+Rack 13;35;3;Dell PowerEdge R940;VRTSRV11;SERVIDOR_FISICO;130.1.0.98;WindowsServer 2022 DTC;Hyper-V Core;157204;S123456;Intel Xeon Platinum 2.20Ghz;768Gb;6880GB;;false

@@ -42,6 +42,7 @@ const seedUser_1 = require("./seedUser");
 const seedAtivos_1 = require("./seedAtivos");
 const seedVMs_1 = require("./seedVMs");
 const seedAplicacoes_1 = require("./seedAplicacoes");
+const seedRacks_1 = require("./seedRacks");
 dotenv.config();
 async function validateBeforeSeed() {
     const { error } = validation_schema_1.validationSchema.validate(process.env, {
@@ -69,6 +70,7 @@ async function main() {
     await (0, seedAtivos_1.seedAtivos)(prisma);
     await (0, seedVMs_1.seedVMs)(prisma);
     await (0, seedAplicacoes_1.seedAplicacoes)(prisma);
+    await (0, seedRacks_1.seedRacks)(prisma);
     console.log('🎉 Seed finalizado com sucesso.');
 }
 main()

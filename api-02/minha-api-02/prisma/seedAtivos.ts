@@ -7,23 +7,22 @@ const filePath = path.resolve(__dirname, "data", "ativos.csv");
 
 // ---------- TYPES ----------
 type AtivoCSV = {
-  tipo: string;
+  rack?: string;          // Nome do Rack vindo do CSV (ex: 'Rack 13')
+  posicaoRack?: string;  
   tamanhoU?: string;       
-  posicaoRack: string;  
-  rackId?: string;
   hardware?: string;
   hostname?: string;
+  tipo?: string;
   ipPrincipal?: string;
   sistemaOperacional?: string;
   oQueRoda?: string;
-  apelido?: string;
   patrimonio?: string;
   serial?: string;
   cpu?: string;
   ram?: string;
   armazenamento?: string;
+  observacoes?: string;
   isVirtualizado?: string;
-  hostFisicoHostname?: string; // Alterado para mapear por hostname textual
 };
 
 // ---------- HELPERS ----------
@@ -46,7 +45,7 @@ const toInt = (v?: any) => {
 function parseCsv(file: string): Promise<AtivoCSV[]> {
   return new Promise((resolve, reject) => {
     const results: AtivoCSV[] = [];
-    if (!fs.existsSync(file)) return reject(new Error("Arquivo CSV não encontrado."));
+    if (!fs.existsSync(file)) return reject(new Error("Arquivo CSV de Ativos não encontrado em: " + file));
 
     fs.createReadStream(file)
       .pipe(csv({ separator: ";" }))
@@ -56,34 +55,59 @@ function parseCsv(file: string): Promise<AtivoCSV[]> {
   });
 }
 
-// ---------- SEED ----------
+// ---------- SEED MAIN FUNCTION ----------
 export async function seedAtivos(prisma: PrismaClient) {
-  console.log("📦 Importando ativos...");
+  console.log("📦 Iniciando a importação de ativos físicos...");
 
   const rows = await parseCsv(filePath);
-  console.log(`📄 CSV lido: ${rows.length} registros.`);
+  console.log(`📄 CSV lido com sucesso: ${rows.length} registros encontrados.`);
 
   let success = 0;
   let fail = 0;
 
-  // FASE 1: Criar ou atualizar os ativos limpando inconsistências físicas
   for (const row of rows) {
     const hostnameValue = toStr(row.hostname);
-    if (!hostnameValue) continue;
+    if (!hostnameValue) {
+      continue;
+    }
 
     try {
       const tipoAtivo = (row.tipo as AtivoTipo) || AtivoTipo.SERVIDOR_FISICO;
+      const isVM = tipoAtivo === AtivoTipo.SERVIDOR_VIRTUAL;
       
-      // Padronizado com 'O' maiúsculo em todos os lugares
       const ehVirtualOuMovel = 
-        tipoAtivo === AtivoTipo.SERVIDOR_VIRTUAL || 
+        isVM || 
         tipoAtivo === AtivoTipo.LAPTOP || 
         tipoAtivo === AtivoTipo.MONITOR;
 
-      const rId = ehVirtualOuMovel ? null : toStr(row.rackId);
+      // Regras de negócio para ativos físicos e virtuais (VMs não têm Rack)
+      const nomeRack = ehVirtualOuMovel ? null : toStr(row.rack);
       const posRack = ehVirtualOuMovel ? null : toInt(row.posicaoRack);
-      const tamU = tipoAtivo === AtivoTipo.SERVIDOR_VIRTUAL ? 0 : (toInt(row.tamanhoU) ?? 1);
+      const tamU = isVM ? 0 : (toInt(row.tamanhoU) ?? 1);
 
+      let rackIdReal: string | null = null;
+
+      // 🔍 BUSCA DO RACK: Mapeia o nome do texto do CSV para achar o rackId (UUID) real
+      if (nomeRack) {
+        const rackEncontrado = await prisma.rack.findUnique({
+          where: { nome: nomeRack },
+          select: { id: true }
+        });
+
+        if (rackEncontrado) {
+          rackIdReal = rackEncontrado.id;
+        } else {
+          console.warn(`⚠️ Rack [${nomeRack}] não foi pré-cadastrado no sistema. O ativo [${hostnameValue}] será salvo sem rack.`);
+        }
+      }
+
+      // Padronizações normativas para evitar campos nulos obrigatórios se for VM
+      const fabricanteFinal = isVM ? "Virtual" : "Mapeado via CSV";
+      const modeloFinal = isVM ? "Virtual Machine" : toStr(row.hardware);
+      const patrimonioFinal = isVM ? `VM-${hostnameValue}` : toStr(row.patrimonio);
+      const serialFinal = isVM ? null : toStr(row.serial);
+
+      // 💾 Gravação direta usando a FK rackId (String) do seu Schema
       await prisma.ativo.upsert({
         where: { hostname: hostnameValue },
         update: {
@@ -91,16 +115,21 @@ export async function seedAtivos(prisma: PrismaClient) {
           ipPrincipal: toStr(row.ipPrincipal),
           tipo: tipoAtivo,
           tamanhoU: tamU,
+          posicaoRack: posRack,
           sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido),
-          patrimonio: toStr(row.patrimonio),
-          serial: toStr(row.serial),
+          apelido: toStr(row.apelido) || toStr(row.oQueRoda),
+          patrimonio: patrimonioFinal,
+          serial: serialFinal,
           cpu: toStr(row.cpu),
           ram: toStr(row.ram),
           armazenamento: toStr(row.armazenamento),
-          isVirtualizado: toBool(row.isVirtualizado),
-          posicaoRack: posRack,
-          rack: rId ? { connect: { id: rId } } : { disconnect: true },
+          observacoes: toStr(row.observacoes),
+          isVirtualizado: isVM ? true : toBool(row.isVirtualizado),
+          fabricante: fabricanteFinal,
+          modelo: modeloFinal,
+          
+          // Atualiza o rackId diretamente (Se for null, o banco desvincula automaticamente)
+          rackId: rackIdReal, 
         },
         create: {
           hostname: hostnameValue,
@@ -108,61 +137,35 @@ export async function seedAtivos(prisma: PrismaClient) {
           ipPrincipal: toStr(row.ipPrincipal),
           tipo: tipoAtivo,
           tamanhoU: tamU,
+          posicaoRack: posRack,
           sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido),
-          patrimonio: toStr(row.patrimonio),
-          serial: toStr(row.serial),
+          apelido: toStr(row.apelido) || toStr(row.oQueRoda),
+          patrimonio: patrimonioFinal!,
+          serial: serialFinal,
           cpu: toStr(row.cpu),
           ram: toStr(row.ram),
           armazenamento: toStr(row.armazenamento),
-          isVirtualizado: toBool(row.isVirtualizado),
-          posicaoRack: posRack,
-          rack: rId ? { connect: { id: rId } } : undefined,
+          observacoes: toStr(row.observacoes),
+          isVirtualizado: isVM ? true : toBool(row.isVirtualizado),
+          fabricante: fabricanteFinal,
+          modelo: modeloFinal!,
+          status: "EM_USO",
+          emUso: true,
+          valor: 0,
+          
+          // Insere o rackId diretamente no momento da criação
+          rackId: rackIdReal, 
         },
       });
       success++;
     } catch (e: any) {
       fail++;
-      console.error(`❌ Erro na Fase 1 do ativo [${hostnameValue}]: ${e.message}`);
+      console.error(`❌ Falha crítica ao processar o ativo [${hostnameValue}]: ${e.message}`);
     }
   }
 
-  // FASE 2: Resolver os relacionamentos lógicos (VM -> Host Físico) via Hostname
-  console.log("🔗 Vinculando Máquinas Virtuais aos Hosts...");
-  for (const row of rows) {
-    const parentHostname = toStr(row.hostFisicoHostname);
-    const hostnameValue = toStr(row.hostname);
-
-    if (parentHostname && hostnameValue) {
-      try {
-        // 1. Busca o ID real do host físico gerado pelo banco
-        const hostAtivo = await prisma.ativo.findUnique({
-          where: { hostname: parentHostname },
-          select: { id: true, tipo: true }
-        });
-
-        if (!hostAtivo) {
-          console.warn(`⚠️ Host [${parentHostname}] não encontrado no banco. Pulando VM [${hostnameValue}].`);
-          continue;
-        }
-
-        if (hostAtivo.tipo !== AtivoTipo.SERVIDOR_FISICO) {
-          console.warn(`⚠️ O ativo [${parentHostname}] foi achado, mas não é um SERVIDOR_FISICO. Falha de integridade.`);
-          continue;
-        }
-
-        // 2. Realiza o update injetando o ID numérico correto
-        await prisma.ativo.update({
-          where: { hostname: hostnameValue },
-          data: {
-            host: { connect: { id: hostAtivo.id } }
-          }
-        });
-      } catch (e: any) {
-        console.error(`❌ Erro ao vincular a VM [${hostnameValue}] ao host [${parentHostname}]: ${e.message}`);
-      }
-    }
-  }
-
-  console.log(`\n🏁 Resultado Final: ${success} sucessos, ${fail} falhas.`);
+  console.log(`\n🏁 --- RESUMO DO SEED DE ATIVOS ---`);
+  console.log(`✅ Sucessos salvos no banco: ${success}`);
+  console.log(`❌ Falhas de processamento: ${fail}`);
 }
+

@@ -9,6 +9,7 @@ import { seedUser } from './seedUser';
 import { seedAtivos } from './seedAtivos';
 import { seedVMs } from './seedVMs';
 import { seedAplicacoes } from './seedAplicacoes'
+import { seedRacks } from './seedRacks';
 
 // ----------------------------------------------------
 // ENV
@@ -65,6 +66,7 @@ async function main() {
   await seedAtivos(prisma);
   await seedVMs(prisma);
   await seedAplicacoes(prisma);
+  await seedRacks(prisma);
 
   console.log('🎉 Seed finalizado com sucesso.');
 }

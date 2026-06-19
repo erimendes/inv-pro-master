@@ -124,7 +124,9 @@ model Ativo {
   tipo                  AtivoTipo           @default(LAPTOP)
 
   fabricante            String?
+
   hardware              String?
+  
   modelo                String?
 
   serial                String?             @unique

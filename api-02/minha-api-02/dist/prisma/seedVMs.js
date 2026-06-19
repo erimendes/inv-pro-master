@@ -37,10 +37,8 @@ async function seedVMs(prisma) {
     let hypervisorsUpdated = 0;
     for (const row of rows) {
         const hostname = toStr(row.hostname);
-        if (!hostname) {
-            fail++;
+        if (!hostname)
             continue;
-        }
         try {
             const hostnameServidorStr = toStr(row.hostnameServidor);
             const hardwareStr = toStr(row.hardware) || "";
@@ -48,7 +46,7 @@ async function seedVMs(prisma) {
             if (hostnameServidorStr) {
                 const host = await prisma.ativo.findUnique({
                     where: { hostname: hostnameServidorStr },
-                    select: { id: true, tipo: true },
+                    select: { id: true }
                 });
                 if (!host) {
                     console.warn(`⚠️ Host Pai [${hostnameServidorStr}] especificado no CSV não foi encontrado no banco.`);
@@ -60,12 +58,11 @@ async function seedVMs(prisma) {
                             where: { id: host.id },
                             data: { hypervisor: "HYPERV" },
                         });
-                        console.log(`🛡️ Host Pai [${hostnameServidorStr}] atualizado para hypervisor: HYPERV`);
+                        console.log(`🛡️ Host Pai [${hostnameServidorStr}] configurado para hypervisor: HYPERV`);
                         hypervisorsUpdated++;
                     }
                 }
             }
-            const patrimonioVirtual = `VM-${hostname}`;
             await prisma.ativo.upsert({
                 where: { hostname },
                 update: {
@@ -77,7 +74,7 @@ async function seedVMs(prisma) {
                     cpu: toStr(row.cpu),
                     ram: toStr(row.ram),
                     armazenamento: toStr(row.armazenamento),
-                    isVirtualizado: toBool(row.isVirtualizado) || true,
+                    isVirtualizado: true,
                     hostFisicoId: hostIdValue,
                     tamanhoU: 0,
                     posicaoRack: null,
@@ -90,7 +87,7 @@ async function seedVMs(prisma) {
                 },
                 create: {
                     hostname,
-                    patrimonio: patrimonioVirtual,
+                    patrimonio: `VM-${hostname}`,
                     hardware: hardwareStr || "Virtualizado",
                     ipPrincipal: toStr(row.ipPrincipal),
                     tipo: client_1.AtivoTipo.SERVIDOR_VIRTUAL,
@@ -99,7 +96,7 @@ async function seedVMs(prisma) {
                     cpu: toStr(row.cpu),
                     ram: toStr(row.ram),
                     armazenamento: toStr(row.armazenamento),
-                    isVirtualizado: toBool(row.isVirtualizado) || true,
+                    isVirtualizado: true,
                     hostFisicoId: hostIdValue,
                     tamanhoU: 0,
                     posicaoRack: null,
@@ -109,6 +106,8 @@ async function seedVMs(prisma) {
                     serial: null,
                     valor: 0,
                     dataCompra: null,
+                    status: "EM_USO",
+                    emUso: true
                 },
             });
             success++;
@@ -118,12 +117,10 @@ async function seedVMs(prisma) {
             console.error(`❌ Erro na VM [${hostname}]: ${e.message}`);
         }
     }
-    console.log(`\n🏁 --- RESUMO DA CARGA ---`);
-    console.log(`✅ VMs processadas com sucesso: ${success}`);
+    console.log(`\n🏁 --- RESUMO DA CARGA DE VMs ---`);
+    console.log(`✅ VMs cadastradas com sucesso: ${success}`);
     console.log(`🛡️ Hosts físicos marcados como HYPERV: ${hypervisorsUpdated}`);
-    if (fail > 0) {
-        console.warn(`⚠️ Houve ${fail} falha(s) durante o processo.`);
-        throw new Error(`Seed VMs finalizou com erros pendentes.`);
-    }
+    if (fail > 0)
+        console.warn(`⚠️ Houve ${fail} falhas no processo.`);
 }
 //# sourceMappingURL=seedVMs.js.map
