@@ -20,10 +20,10 @@ export declare class AssetsService {
         } | null;
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
@@ -68,10 +68,10 @@ export declare class AssetsService {
         } | null;
         vms: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
@@ -116,10 +116,10 @@ export declare class AssetsService {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -195,10 +195,10 @@ export declare class AssetsService {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -244,10 +244,10 @@ export declare class AssetsService {
     findAvailable(): Promise<({
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
@@ -292,10 +292,10 @@ export declare class AssetsService {
         } | null;
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -402,10 +402,10 @@ export declare class AssetsService {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -462,10 +462,10 @@ export declare class AssetsService {
         } | null;
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
@@ -510,10 +510,10 @@ export declare class AssetsService {
         } | null;
         vms: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
@@ -558,10 +558,10 @@ export declare class AssetsService {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -606,10 +606,10 @@ export declare class AssetsService {
     }>;
     remove(id: number): Promise<{
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -657,10 +657,10 @@ export declare class AssetsService {
         posicaoRack: number | null;
     }): Promise<{
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;

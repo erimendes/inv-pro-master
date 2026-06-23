@@ -8,10 +8,10 @@ export declare class ApplicationsController {
     create(body: CreateApplicationDto): Promise<{
         servidores: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
@@ -82,10 +82,10 @@ export declare class ApplicationsController {
     findAll(categoria?: SistemaCategoria, criticidade?: Criticidade): Promise<({
         servidores: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
@@ -156,10 +156,10 @@ export declare class ApplicationsController {
     findOne(id: number): Promise<{
         servidores: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
@@ -230,10 +230,10 @@ export declare class ApplicationsController {
     update(id: number, body: UpdateApplicationDto): Promise<{
         servidores: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;

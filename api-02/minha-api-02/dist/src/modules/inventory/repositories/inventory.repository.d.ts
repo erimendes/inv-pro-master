@@ -5,10 +5,10 @@ export declare class InventoryRepository {
     constructor(prisma: PrismaService);
     upsertAtivo(data: any): Promise<{
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -53,7 +53,9 @@ export declare class InventoryRepository {
     }>;
     findByTag(tag: string): Promise<({
         user: {
+            ativo: boolean;
             id: string;
+            createdAt: Date;
             username: string;
             email: string;
             password: string | null;
@@ -62,8 +64,6 @@ export declare class InventoryRepository {
             role: import("../../../../generated/prisma/enums").Role;
             departamento: string | null;
             ultimoLogin: Date | null;
-            ativo: boolean;
-            createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
         } | null;
@@ -87,10 +87,10 @@ export declare class InventoryRepository {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
@@ -135,7 +135,9 @@ export declare class InventoryRepository {
     }) | null>;
     findAll(): Promise<({
         user: {
+            ativo: boolean;
             id: string;
+            createdAt: Date;
             username: string;
             email: string;
             password: string | null;
@@ -144,8 +146,6 @@ export declare class InventoryRepository {
             role: import("../../../../generated/prisma/enums").Role;
             departamento: string | null;
             ultimoLogin: Date | null;
-            ativo: boolean;
-            createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
         } | null;
@@ -169,10 +169,10 @@ export declare class InventoryRepository {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;

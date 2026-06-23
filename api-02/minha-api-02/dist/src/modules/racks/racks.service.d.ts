@@ -18,10 +18,10 @@ export declare class RacksService {
     findAll(): Promise<({
         ativos: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -78,10 +78,10 @@ export declare class RacksService {
     findOne(id: string): Promise<{
         ativos: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;

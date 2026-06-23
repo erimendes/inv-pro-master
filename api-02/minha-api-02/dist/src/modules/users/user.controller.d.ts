@@ -16,7 +16,9 @@ export declare class UserController {
     private readonly service;
     constructor(service: UserService);
     updateMe(req: AuthenticatedRequest, body: UpdateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -24,11 +26,11 @@ export declare class UserController {
         role: Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     create(body: CreateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -36,11 +38,11 @@ export declare class UserController {
         role: Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     findAll(): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -48,11 +50,11 @@ export declare class UserController {
         role: Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }[]>;
     findOne(id: string): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -60,11 +62,11 @@ export declare class UserController {
         role: Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     update(id: string, body: UpdateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -72,8 +74,6 @@ export declare class UserController {
         role: Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     remove(id: string): Promise<{
         message: string;

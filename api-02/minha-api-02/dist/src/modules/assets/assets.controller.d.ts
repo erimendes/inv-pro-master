@@ -41,10 +41,10 @@ export declare class AssetsController {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -90,10 +90,10 @@ export declare class AssetsController {
     findAvailable(): Promise<({
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -138,10 +138,10 @@ export declare class AssetsController {
         } | null;
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -248,10 +248,10 @@ export declare class AssetsController {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -308,10 +308,10 @@ export declare class AssetsController {
         } | null;
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -356,10 +356,10 @@ export declare class AssetsController {
         } | null;
         vms: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -404,10 +404,10 @@ export declare class AssetsController {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -464,10 +464,10 @@ export declare class AssetsController {
         } | null;
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -512,10 +512,10 @@ export declare class AssetsController {
         } | null;
         vms: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -560,10 +560,10 @@ export declare class AssetsController {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -620,10 +620,10 @@ export declare class AssetsController {
         } | null;
         host: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -668,10 +668,10 @@ export declare class AssetsController {
         } | null;
         vms: {
             id: number;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            userId: string | null;
             observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -716,10 +716,10 @@ export declare class AssetsController {
         }[];
     } & {
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -764,10 +764,10 @@ export declare class AssetsController {
     }>;
     remove(id: string): Promise<{
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
@@ -812,10 +812,10 @@ export declare class AssetsController {
     }>;
     updatePosition(id: string, updateDto: UpdateAssetPositionDto): Promise<{
         id: number;
+        userId: string | null;
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
-        userId: string | null;
         observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;

@@ -14,7 +14,9 @@ export declare class AuthController {
     private readonly auth;
     constructor(auth: AuthService);
     register(dto: CreateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -22,8 +24,6 @@ export declare class AuthController {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     login(body: LoginDto, req: CustomHttpRequest): Promise<{
         id: string;

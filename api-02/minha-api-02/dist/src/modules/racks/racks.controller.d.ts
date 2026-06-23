@@ -6,23 +6,23 @@ export declare class RacksController {
     constructor(racksService: RacksService);
     create(createRackDto: CreateRackDto): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
         observacoes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     findAll(): Promise<({
         ativos: {
             id: number;
-            observacoes: string | null;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            posicaoRack: number | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -58,31 +58,31 @@ export declare class RacksController {
             cluster: string | null;
             datacenter: string | null;
             hostFisicoId: number | null;
-            userId: string | null;
             rackId: string | null;
+            posicaoRack: number | null;
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
         observacoes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     })[]>;
     findOne(id: string): Promise<{
         ativos: {
             id: number;
-            observacoes: string | null;
+            userId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            posicaoRack: number | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -118,43 +118,43 @@ export declare class RacksController {
             cluster: string | null;
             datacenter: string | null;
             hostFisicoId: number | null;
-            userId: string | null;
             rackId: string | null;
+            posicaoRack: number | null;
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
         observacoes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     update(id: string, body: UpdateRackDto): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
         observacoes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     remove(id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
         observacoes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
 }

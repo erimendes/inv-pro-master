@@ -6,7 +6,9 @@ export declare class UserService {
     constructor(prisma: PrismaService);
     private readonly userSelect;
     create(data: CreateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -14,11 +16,11 @@ export declare class UserService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     findAll(): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -26,11 +28,11 @@ export declare class UserService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }[]>;
     findOne(id: string): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -38,11 +40,11 @@ export declare class UserService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     findByEmailOrUsername(identifier: string): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         password: string | null;
@@ -51,13 +53,13 @@ export declare class UserService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
     } | null>;
     update(id: string, data: UpdateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -65,8 +67,6 @@ export declare class UserService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     remove(id: string): Promise<{
         message: string;

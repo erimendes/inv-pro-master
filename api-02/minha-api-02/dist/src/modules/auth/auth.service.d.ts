@@ -11,7 +11,9 @@ export declare class AuthService {
     private readonly ldapService;
     constructor(userService: UserService, prisma: PrismaService, jwt: JwtService, ldapService: LdapService);
     register(dto: CreateUserDto): Promise<{
+        ativo: boolean;
         id: string;
+        createdAt: Date;
         username: string;
         email: string;
         name: string | null;
@@ -19,8 +21,6 @@ export declare class AuthService {
         role: import("../../../generated/prisma/enums").Role;
         departamento: string | null;
         ultimoLogin: Date | null;
-        ativo: boolean;
-        createdAt: Date;
     }>;
     login(credentials: LoginDto, meta: {
         ip?: string;
