@@ -19,6 +19,8 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "typeRoots": ["./node_modules/@types", "./src/@types"] // 👈 Adicione o caminho do seu @types aqui
+  },
+  "include": ["src/**/*"] // 👈 Garante que tudo dentro de src (incluindo o @types) seja lido
 }

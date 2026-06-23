@@ -62,11 +62,13 @@ async function main() {
     await seedUser(tx);
   });
 
+  console.log('🖥️ Cadastrando infraestrutura de Racks...');
+  await seedRacks(prisma);
+
   // grandes imports
   await seedAtivos(prisma);
   await seedVMs(prisma);
   await seedAplicacoes(prisma);
-  await seedRacks(prisma);
 
   console.log('🎉 Seed finalizado com sucesso.');
 }

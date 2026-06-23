@@ -20,6 +20,7 @@ export default function AssetFormPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Mantemos o backUrl como um plano B caso o formulário seja aberto por link direto
   const backUrl = location.state?.from || '/assets';
   const { id } = useParams();
   const { notify } = useNotification();
@@ -61,7 +62,6 @@ export default function AssetFormPage() {
     tamanhoU: undefined,
   });
 
-  // Flag utilitária para saber se o ativo atual selecionado no form é uma Máquina Virtual
   const isVM = form.tipo === 'SERVIDOR_VIRTUAL';
 
   /* ========================================================= */
@@ -154,17 +154,14 @@ export default function AssetFormPage() {
         tipo: novoTipo,
         isVirtualizado: targetIsVM ? true : prev.isVirtualizado,
         hypervisor: targetIsHost ? prev.hypervisor : '',
-        
-        // 🌟 Se virou VM, limpa na árvore do estado os campos de rack e dados físicos
         rackId: targetIsVM ? undefined : prev.rackId,
         posicaoRack: targetIsVM ? undefined : prev.posicaoRack,
         tamanhoU: targetIsVM ? undefined : prev.tamanhoU,
-        fabricante: targetIsVM ? 'VIRTUAL' : prev.fabricante, // Evita quebrar validação de string obrigatória no backend
+        fabricante: targetIsVM ? 'VIRTUAL' : prev.fabricante,
         modelo: targetIsVM ? 'VIRTUAL_MACHINE' : prev.modelo, 
         serial: targetIsVM ? '' : prev.serial,
         valor: targetIsVM ? 0 : prev.valor,
         dataCompra: targetIsVM ? undefined : prev.dataCompra,
-        
         hostFisicoId: targetIsHost ? undefined : prev.hostFisicoId,
       };
     });
@@ -173,6 +170,14 @@ export default function AssetFormPage() {
   function updateField<K extends keyof Asset>(field: K, value: Asset[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
+  const handleGoBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate(backUrl);
+    }
+  };
 
   /* ========================================================= */
   /* SUBMIT PAYLOAD */
@@ -202,10 +207,8 @@ export default function AssetFormPage() {
         vmsIds: form.tipo === 'SERVIDOR_FISICO' ? selectedVmIds : [],
       };
 
-      // 🌟 CONDICIONAL DE COLETA DE DADOS BASEADA NO TIPO
       if (isVM) {
-        // Se for Máquina Virtual, força campos físicos/financeiros padrão para o backend
-        payload.patrimonio = `VM-${form.hostname?.trim() || Date.now()}`; // Gera um patrimônio virtual autônomo
+        payload.patrimonio = `VM-${form.hostname?.trim() || Date.now()}`;
         payload.fabricante = "Virtual";
         payload.modelo = "Virtual Machine";
         payload.hardware = form.hardware?.trim() || "Virtualizado";
@@ -217,7 +220,6 @@ export default function AssetFormPage() {
         payload.tamanhoU = 0;
         payload.hypervisor = null;
       } else {
-        // Se for ativo físico tradicional, coleta os campos do formulário normalmente
         payload.patrimonio = form.patrimonio?.trim() || null;
         payload.fabricante = form.fabricante?.trim() || null;
         payload.modelo = form.modelo?.trim() || null;
@@ -243,7 +245,7 @@ export default function AssetFormPage() {
         notify('Ativo criado com sucesso!', 'success');
       }
 
-      navigate(backUrl);
+      handleGoBack();
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err?.response?.data?.message || err?.message || 'Erro ao salvar ativo');
@@ -254,29 +256,32 @@ export default function AssetFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-white">
-      <div className="mx-auto max-w-7xl">
+    /* 🟢 CASCA COMPACTA DO VIEWPORT: Trava a tela externa, aplica paddings enxutos de régua padrão */
+    <div className="h-screen w-full bg-slate-950 px-8 pt-2 pb-1 text-white flex flex-col overflow-hidden min-h-0">
+      <div className="mx-auto max-w-7xl w-full h-full flex flex-col min-h-0 overflow-hidden">
         
-        {/* HEADER */}
-        <div className="mb-8 flex items-start justify-between">
+        {/* HEADER COMPACTADO FIXO */}
+        {/* 🟢 Reduzido margin-bottom de mb-8 para mb-3 para evitar desperdício de espaço vertical */}
+        <div className="mb-3 flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-3xl font-bold">{id ? 'Editar Ativo' : 'Novo Ativo'}</h1>
-            <p className="mt-2 text-sm text-slate-400">Gerenciamento de ativos físicos e instâncias virtualizadas</p>
+            <h1 className="text-3xl font-black tracking-tight">{id ? 'Editar Ativo' : 'Novo Ativo'}</h1>
+            <p className="mt-0.5 text-xs text-slate-400">Gerenciamento de ativos físicos e instâncias virtualizadas</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="submit"
               form="asset-form"
               disabled={loading}
-              className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Salvando...' : 'Salvar'}
             </button>
+            
             <button
               type="button"
-              onClick={() => navigate(backUrl)}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-slate-300 hover:bg-slate-800 transition"
+              onClick={handleGoBack}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
             >
               Cancelar
             </button>
@@ -284,14 +289,16 @@ export default function AssetFormPage() {
         </div>
 
         {errorMessage && (
-          <div className="mb-6 rounded-lg border border-red-500 bg-red-500/10 p-4 text-red-300 text-sm">
+          <div className="mb-4 rounded-xl border border-red-500 bg-red-500/10 p-3.5 text-red-300 text-xs shrink-0">
             ⚠️ {errorMessage}
           </div>
         )}
 
-        <form id="asset-form" onSubmit={handleSubmit} className="space-y-8">
+        {/* 🟢 FORMULÁRIO COM ROLAGEM INDEPENDENTE ISOLADA */}
+        {/* Adicionado 'flex-1 overflow-y-auto pr-1 pb-4' para permitir scroll interno liso sem colapsar com o header */}
+        <form id="asset-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 pb-4 space-y-4 min-h-0 custom-scrollbar">
           
-          {/* SEÇÃO 1: IDENTIFICAÇÃO (Campos dinâmicos se for VM) */}
+          {/* SEÇÃO 1: IDENTIFICAÇÃO */}
           <Section title="Identificação Geral">
             <Grid>
               <SelectField
@@ -326,7 +333,6 @@ export default function AssetFormPage() {
               <Input label="Apelido / Tag de Identificação" value={form.apelido} onChange={(v) => updateField('apelido', v)} />
               <Input label="Família ou Cluster de Hardware" value={form.hardware} onChange={(v) => updateField('hardware', v)} />
 
-              {/* 🌟 OCULTA CAMPOS SE FOR MÁQUINA VIRTUAL */}
               {!isVM && (
                 <>
                   <Input label="Patrimônio Corporativo *" value={form.patrimonio} onChange={(v) => updateField('patrimonio', v)} />
@@ -354,7 +360,7 @@ export default function AssetFormPage() {
             </Grid>
           </Section>
 
-          {/* SEÇÃO 2: INFRAESTRUTURA DE RACK (Ocultado Completamente para VMs) */}
+          {/* SEÇÃO 2: INFRAESTRUTURA DE RACK */}
           {!isVM && (
             <Section title="Localização no Datacenter & Rack">
               <Grid>
@@ -373,7 +379,7 @@ export default function AssetFormPage() {
             </Section>
           )}
 
-          {/* SEÇÃO 3: RECURSOS LÓGICOS (Visível para todos) */}
+          {/* SEÇÃO 3: RECURSOS LÓGICOS */}
           <Section title="Capacidade Lógica e Rede">
             <Grid>
               <Input label="Endereço IP Principal" value={form.ipPrincipal} onChange={(v) => updateField('ipPrincipal', v)} />
@@ -387,13 +393,12 @@ export default function AssetFormPage() {
 
           {/* SEÇÃO 4: HIERARQUIA DE VIRTUALIZAÇÃO */}
           <Section title="Estratégia de Infraestrutura & Vínculos">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Checkbox label="Ativo em Produção / Operacional" checked={form.emUso ?? false} onChange={(v) => updateField('emUso', v)} />
                 <Checkbox label="Este ativo hospeda virtualização?" disabled={isVM} checked={isVM ? true : (form.isVirtualizado ?? false)} onChange={(v) => updateField('isVirtualizado', v)} />
               </div>
 
-              {/* Se for uma VM, exige a seleção do Host Pai onde reside */}
               {isVM && (
                 <div className="max-w-md">
                   <SelectField
@@ -411,24 +416,23 @@ export default function AssetFormPage() {
                 </div>
               )}
 
-              {/* Se for um Servidor Físico, permite acoplar várias VMs nele */}
               {form.tipo === 'SERVIDOR_FISICO' && (
-                <div className="border-t border-slate-800 pt-4">
-                  <label className="block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide">
+                <div className="border-t border-slate-800 pt-3">
+                  <label className="block text-xs font-black uppercase text-slate-300 mb-1 tracking-wider">
                     Vincular Máquinas Virtuais Dependentes
                   </label>
-                  <p className="text-xs text-slate-500 mb-4">Selecione as instâncias virtuais do inventário criadas dentro deste nó:</p>
+                  <p className="text-[11px] text-slate-500 mb-3">Selecione as instâncias virtuais do inventário criadas dentro deste nó:</p>
                   
                   {availableVms.length === 0 ? (
-                    <div className="text-xs p-4 text-center rounded-lg border border-dashed border-slate-800 text-slate-600 bg-slate-950/40">
+                    <div className="text-xs p-4 text-center rounded-xl border border-dashed border-slate-800 text-slate-600 bg-slate-950/40">
                       Nenhuma máquina virtual disponível ou órfã encontrada para alocação.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                       {availableVms.map((vm) => (
                         <label 
                           key={vm.id} 
-                          className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-sm ${
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer text-xs ${
                             selectedVmIds.includes(Number(vm.id))
                               ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 font-bold'
                               : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -438,11 +442,11 @@ export default function AssetFormPage() {
                             type="checkbox"
                             checked={selectedVmIds.includes(Number(vm.id))}
                             onChange={() => handleVmToggle(Number(vm.id))}
-                            className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0"
+                            className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0 cursor-pointer accent-cyan-500"
                           />
-                          <div className="flex flex-col">
-                            <span>{vm.hostname}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{vm.ipPrincipal || 'Sem IP'}</span>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="truncate">{vm.hostname}</span>
+                            <span className="text-[9px] text-slate-500 font-mono truncate">{vm.ipPrincipal || 'Sem IP'}</span>
                           </div>
                         </label>
                       ))}
@@ -456,11 +460,11 @@ export default function AssetFormPage() {
           {/* ANOTAÇÕES */}
           <Section title="Anotações Gerais / Logs de Alteração">
             <textarea
-              rows={4}
+              rows={3}
               placeholder="Notas de manutenção, histórico de chamados ou observações de sysadmin..."
               value={form.observacoes ?? ''}
               onChange={(e) => updateField('observacoes', e.target.value as any)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white text-sm outline-none transition focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-white text-xs outline-none transition focus:border-blue-500 focus:ring-0"
             />
           </Section>
         </form>

@@ -1,13 +1,12 @@
+// src/modulos/home/layouts/DashboardLayout.tsx
 import { Outlet } from 'react-router-dom';
 
 export default function DashboardLayout() {
   return (
-    // Remova o w-full e min-h-screen se der conflito. 
-    // Usar flex-1 aqui faz ele se adaptar ao tamanho exato do conteúdo da página atual de forma fluida.
-    // <div className="flex-1 w-full bg-[#020617] text-slate-100 flex flex-col font-sans antialiased">
-    <div className="h-full w-full bg-[#020617] text-slate-100 flex flex-col border-2 border-red-500 font-sans antialiased">
+    <div className="flex-1 w-full bg-[#020617] text-slate-100 flex flex-col font-sans antialiased min-h-0 overflow-hidden">
       
-      <main className="p-4 flex-1 flex flex-col">
+      {/* 🟢 CORREÇÃO: Reduzido padding de p-4 para p-2 para ganhar espaço em mobile */}
+      <main className="p-2 md:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
         <Outlet />
       </main>
 

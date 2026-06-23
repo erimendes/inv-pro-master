@@ -10,18 +10,21 @@ export declare class AssetsService {
         rack: {
             id: string;
             createdAt: Date;
-            observacoes: string | null;
             updatedAt: Date;
             deletedAt: Date | null;
             nome: string;
             localizacao: string | null;
             corredor: string | null;
             capacidade: number;
+            observacoes: string | null;
         } | null;
         host: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
             fabricante: string | null;
@@ -51,7 +54,6 @@ export declare class AssetsService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -63,13 +65,14 @@ export declare class AssetsService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         } | null;
         vms: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
             fabricante: string | null;
@@ -99,7 +102,6 @@ export declare class AssetsService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -111,13 +113,14 @@ export declare class AssetsService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -147,7 +150,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -159,20 +161,18 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     findAll(tipo?: string): Promise<({
         rack: {
             id: string;
             createdAt: Date;
-            observacoes: string | null;
             updatedAt: Date;
             deletedAt: Date | null;
             nome: string;
             localizacao: string | null;
             corredor: string | null;
             capacidade: number;
+            observacoes: string | null;
         } | null;
         host: {
             id: number;
@@ -190,13 +190,16 @@ export declare class AssetsService {
         }[];
         aplicacoes: {
             id: number;
-            criticidade: import("../../../generated/prisma/enums").Criticidade;
             nome: string;
+            criticidade: import("../../../generated/prisma/enums").Criticidade;
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -226,7 +229,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -238,14 +240,15 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     })[]>;
     findAvailable(): Promise<({
         host: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
             fabricante: string | null;
@@ -275,7 +278,6 @@ export declare class AssetsService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -287,13 +289,14 @@ export declare class AssetsService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         } | null;
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -323,7 +326,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -335,25 +337,23 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     })[]>;
     findOne(id: number): Promise<{
         user: {
-            name: string | null;
             id: string;
             email: string;
+            name: string | null;
         } | null;
         rack: {
             id: string;
             createdAt: Date;
-            observacoes: string | null;
             updatedAt: Date;
             deletedAt: Date | null;
             nome: string;
             localizacao: string | null;
             corredor: string | null;
             capacidade: number;
+            observacoes: string | null;
         } | null;
         host: {
             id: number;
@@ -379,8 +379,8 @@ export declare class AssetsService {
         configsRede: {
             id: number;
             createdAt: Date;
-            macAddress: string | null;
             updatedAt: Date;
+            macAddress: string | null;
             ipAddress: string | null;
             gateway: string | null;
             mascara: string | null;
@@ -396,14 +396,17 @@ export declare class AssetsService {
         }[];
         aplicacoes: {
             id: number;
-            criticidade: import("../../../generated/prisma/enums").Criticidade;
             nome: string;
+            criticidade: import("../../../generated/prisma/enums").Criticidade;
             sigla: string | null;
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -433,7 +436,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -445,25 +447,26 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     update(id: number, data: UpdateAssetDto): Promise<{
         rack: {
             id: string;
             createdAt: Date;
-            observacoes: string | null;
             updatedAt: Date;
             deletedAt: Date | null;
             nome: string;
             localizacao: string | null;
             corredor: string | null;
             capacidade: number;
+            observacoes: string | null;
         } | null;
         host: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
             fabricante: string | null;
@@ -493,7 +496,6 @@ export declare class AssetsService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -505,13 +507,14 @@ export declare class AssetsService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         } | null;
         vms: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: AtivoTipo;
             fabricante: string | null;
@@ -541,7 +544,6 @@ export declare class AssetsService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -553,13 +555,14 @@ export declare class AssetsService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -589,7 +592,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -601,13 +603,14 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     remove(id: number): Promise<{
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -637,7 +640,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -649,16 +651,17 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     updatePosition(id: number, data: {
         rackId: string | null;
         posicaoRack: number | null;
     }): Promise<{
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: AtivoTipo;
         fabricante: string | null;
@@ -688,7 +691,6 @@ export declare class AssetsService {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -700,7 +702,5 @@ export declare class AssetsService {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
 }

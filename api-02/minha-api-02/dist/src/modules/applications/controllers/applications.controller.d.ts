@@ -8,8 +8,11 @@ export declare class ApplicationsController {
     create(body: CreateApplicationDto): Promise<{
         servidores: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -39,7 +42,6 @@ export declare class ApplicationsController {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -51,24 +53,22 @@ export declare class ApplicationsController {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
-        url: string | null;
         id: number;
         createdAt: Date;
-        descricao: string | null;
-        criticidade: Criticidade;
-        fornecedor: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
+        descricao: string | null;
+        criticidade: Criticidade;
+        fornecedor: string | null;
         sigla: string | null;
         categoria: SistemaCategoria;
         businessOwner: string | null;
         responsavelTecnico: string | null;
         contatoFuncional: string | null;
+        url: string | null;
         repositorio: string | null;
         documentacao: string | null;
         janelaOperacao: string | null;
@@ -82,8 +82,11 @@ export declare class ApplicationsController {
     findAll(categoria?: SistemaCategoria, criticidade?: Criticidade): Promise<({
         servidores: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -113,7 +116,6 @@ export declare class ApplicationsController {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -125,24 +127,22 @@ export declare class ApplicationsController {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
-        url: string | null;
         id: number;
         createdAt: Date;
-        descricao: string | null;
-        criticidade: Criticidade;
-        fornecedor: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
+        descricao: string | null;
+        criticidade: Criticidade;
+        fornecedor: string | null;
         sigla: string | null;
         categoria: SistemaCategoria;
         businessOwner: string | null;
         responsavelTecnico: string | null;
         contatoFuncional: string | null;
+        url: string | null;
         repositorio: string | null;
         documentacao: string | null;
         janelaOperacao: string | null;
@@ -156,8 +156,11 @@ export declare class ApplicationsController {
     findOne(id: number): Promise<{
         servidores: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -187,7 +190,6 @@ export declare class ApplicationsController {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -199,24 +201,22 @@ export declare class ApplicationsController {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
-        url: string | null;
         id: number;
         createdAt: Date;
-        descricao: string | null;
-        criticidade: Criticidade;
-        fornecedor: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
+        descricao: string | null;
+        criticidade: Criticidade;
+        fornecedor: string | null;
         sigla: string | null;
         categoria: SistemaCategoria;
         businessOwner: string | null;
         responsavelTecnico: string | null;
         contatoFuncional: string | null;
+        url: string | null;
         repositorio: string | null;
         documentacao: string | null;
         janelaOperacao: string | null;
@@ -230,8 +230,11 @@ export declare class ApplicationsController {
     update(id: number, body: UpdateApplicationDto): Promise<{
         servidores: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -261,7 +264,6 @@ export declare class ApplicationsController {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -273,24 +275,22 @@ export declare class ApplicationsController {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
-        url: string | null;
         id: number;
         createdAt: Date;
-        descricao: string | null;
-        criticidade: Criticidade;
-        fornecedor: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
+        descricao: string | null;
+        criticidade: Criticidade;
+        fornecedor: string | null;
         sigla: string | null;
         categoria: SistemaCategoria;
         businessOwner: string | null;
         responsavelTecnico: string | null;
         contatoFuncional: string | null;
+        url: string | null;
         repositorio: string | null;
         documentacao: string | null;
         janelaOperacao: string | null;
@@ -302,20 +302,20 @@ export declare class ApplicationsController {
         integracoes: string | null;
     }>;
     remove(id: number): Promise<{
-        url: string | null;
         id: number;
         createdAt: Date;
-        descricao: string | null;
-        criticidade: Criticidade;
-        fornecedor: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
+        descricao: string | null;
+        criticidade: Criticidade;
+        fornecedor: string | null;
         sigla: string | null;
         categoria: SistemaCategoria;
         businessOwner: string | null;
         responsavelTecnico: string | null;
         contatoFuncional: string | null;
+        url: string | null;
         repositorio: string | null;
         documentacao: string | null;
         janelaOperacao: string | null;

@@ -1,151 +1,55 @@
+// src/shared/components/header/Navbar.tsx
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../../modules/auth/context/AuthContext';
-import { canViewModule } from '../../constants/roles'; // 🔄 Importa o validador dinâmico do mapa
+import { canViewModule } from '../../constants/roles'; 
 
 import {
   LayoutDashboard,
-  Database,
   Server,
   Boxes,
+  Laptop,
   Users,
 } from 'lucide-react';
 
-// =========================
-// CONFIGURAÇÃO DOS LINKS E SEUS MÓDULOS CORRESPONDENTES
-// =========================
 const links = [
-  {
-    to: '/',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    color: 'cyan',
-    module: 'dashboard' as const, // 🎯 Mapeia qual módulo do PERMISSION_MAP protege este link
-  },
-  {
-    to: '/racks',
-    label: 'Racks',
-    icon: Database,
-    color: 'cyan',
-    module: 'racks' as const,
-  },
-  {
-    to: '/assets',
-    label: 'Ativos',
-    icon: Server,
-    color: 'emerald',
-    module: 'assets' as const,
-  },
-  {
-    to: '/applications',
-    label: 'Aplicações',
-    icon: Boxes,
-    color: 'violet',
-    module: 'applications' as const,
-  },
-  {
-    to: '/users',
-    label: 'Usuários',
-    icon: Users,
-    color: 'orange',
-    module: 'users' as const,
-  },
+  { to: '/', label: 'Painel', icon: LayoutDashboard, color: 'cyan', module: 'dashboard' as const },
+  { to: '/racks', label: 'Racks', icon: Server, color: 'cyan', module: 'racks' as const },
+  { to: '/assets', label: 'Ativos', icon: Laptop, color: 'emerald', module: 'assets' as const },
+  { to: '/applications', label: 'Aplicações', icon: Boxes, color: 'violet', module: 'applications' as const },
+  { to: '/users', label: 'Usuários', icon: Users, color: 'orange', module: 'users' as const },
 ];
 
-// =========================
-// ESTILOS DE CORES (GLOWS & HOVERS)
-// =========================
 const colors: any = {
   cyan: {
-    active: `
-      bg-cyan-500/15
-      text-cyan-300
-      border
-      border-cyan-400/20
-      shadow-[0_0_25px_rgba(34,211,238,0.12)]
-      backdrop-blur-xl
-    `,
-    hover: `
-      hover:bg-cyan-500/10
-      hover:text-cyan-200
-      hover:border-cyan-400/10
-    `,
+    active: 'bg-cyan-500/15 text-cyan-300 border border-cyan-400/20 shadow-[0_0_25px_rgba(34,211,238,0.12)] backdrop-blur-xl',
+    hover: 'hover:bg-cyan-500/10 hover:text-cyan-200 hover:border-cyan-400/10',
   },
   emerald: {
-    active: `
-      bg-emerald-500/15
-      text-emerald-300
-      border
-      border-emerald-400/20
-      shadow-[0_0_25px_rgba(16,185,129,0.12)]
-      backdrop-blur-xl
-    `,
-    hover: `
-      hover:bg-emerald-500/10
-      hover:text-emerald-200
-      hover:border-emerald-400/10
-    `,
+    active: 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 shadow-[0_0_25px_rgba(16,185,129,0.12)] backdrop-blur-xl',
+    hover: 'hover:bg-emerald-500/10 hover:text-emerald-200 hover:border-emerald-400/10',
   },
   violet: {
-    active: `
-      bg-violet-500/15
-      text-violet-300
-      border
-      border-violet-400/20
-      shadow-[0_0_25px_rgba(139,92,246,0.12)]
-      backdrop-blur-xl
-    `,
-    hover: `
-      hover:bg-violet-500/10
-      hover:text-violet-200
-      hover:border-violet-400/10
-    `,
+    active: 'bg-violet-500/15 text-violet-300 border border-violet-400/20 shadow-[0_0_25px_rgba(139,92,246,0.12)] backdrop-blur-xl',
+    hover: 'hover:bg-violet-500/10 hover:text-violet-200 hover:border-violet-400/10',
   },
   orange: {
-    active: `
-      bg-orange-500/15
-      text-orange-300
-      border
-      border-orange-400/20
-      shadow-[0_0_25px_rgba(249,115,22,0.14)]
-      backdrop-blur-xl
-    `,
-    hover: `
-      hover:bg-orange-500/10
-      hover:text-orange-200
-      hover:border-orange-400/10
-    `,
+    active: 'bg-orange-500/15 text-orange-300 border border-orange-400/20 shadow-[0_0_25px_rgba(249,115,22,0.14)] backdrop-blur-xl',
+    hover: 'hover:bg-orange-500/10 hover:text-orange-200 hover:border-orange-400/10',
   },
 };
 
 export default function Navbar() {
   const { user } = useAuth();
-
-  // =========================
-  // 🔄 FILTRO DE ROLE TOTALMENTE DINÂMICO
-  // =========================
-  // Filtra o array de links consultando em tempo real se a role do usuário 
-  // tem permissão de leitura ('allowedRoles') para aquela tela específica no mapa central.
-  const visibleLinks = links.filter((link) => 
-    canViewModule(user?.role, link.module)
-  );
+  const visibleLinks = links.filter((link) => canViewModule(user?.role, link.module));
 
   return (
-    <div className="flex items-center">
-      <nav
-        className="
-          flex
-          items-center
-          gap-2
-          rounded-3xl
-          border
-          border-white/5
-          bg-[#060b17]/80
-          p-2
-          shadow-2xl
-          shadow-black/40
-          backdrop-blur-2xl
-        "
-      >
+    <div className="flex items-center min-w-0">
+      {/* 🟢 CORREÇÃO DEFINITIVA: Mudado de 'hidden sm:flex' para 'hidden lg:flex'.
+        Nas resoluções comuns de notebooks menores ou quando você redimensionar a janela,
+        o menu inteiro de ícones vai sumir de uma vez para dar espaço total à sua logo lateral,
+        fazendo ela ficar esticada exatamente em uma linha horizontal como no seu print desejado.
+      */}
+      <nav className="hidden lg:flex items-center gap-1 sm:gap-2 rounded-3xl border border-white/5 bg-[#060b17]/80 p-1 sm:p-2 shadow-2xl shadow-black/40 backdrop-blur-2xl">
         {visibleLinks.map((link) => {
           const Icon = link.icon;
 
@@ -158,62 +62,28 @@ export default function Navbar() {
                 relative
                 flex
                 items-center
-                gap-3
+                justify-center
+                gap-2
                 overflow-hidden
                 rounded-2xl
                 border
-                px-4
-                py-3
+                p-2.5
+                xl:px-4
+                xl:py-3
                 transition-all
                 duration-300
-                ${
-                  isActive
-                    ? colors[link.color].active
-                    : `
-                      border-transparent
-                      text-slate-400
-                      ${colors[link.color].hover}
-                    `
-                }
+                ${isActive ? colors[link.color].active : `border-transparent text-slate-400 ${colors[link.color].hover}`}
               `}
             >
               {/* glow hover */}
-              <div
-                className="
-                  absolute
-                  inset-0
-                  opacity-0
-                  transition-opacity
-                  duration-300
-                  group-hover:opacity-100
-                  bg-gradient-to-r
-                  from-white/[0.03]
-                  to-transparent
-                "
-              />
+              <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-r from-white/[0.03] to-transparent" />
 
               {/* icon */}
-              <Icon
-                size={18}
-                className="
-                  transition-transform
-                  duration-300
-                  group-hover:scale-110
-                "
-              />
+              <Icon size={18} className="transition-transform duration-300 group-hover:scale-110 shrink-0" />
 
               {/* label */}
-              <span
-                className="
-                  relative
-                  z-10
-                  hidden
-                  text-sm
-                  font-semibold
-                  tracking-wide
-                  lg:block
-                "
-              >
+              {/* 🟢 O texto se expande apenas quando a tela for extra-grande (xl) */}
+              <span className="relative z-10 hidden xl:block text-sm font-semibold tracking-wide whitespace-nowrap">
                 {link.label}
               </span>
 
@@ -231,12 +101,12 @@ export default function Navbar() {
                   duration-300
                   ${
                     link.color === 'cyan'
-                      ? 'bg-cyan-400 group-hover:w-10'
+                      ? 'group-hover:w-4 xl:group-hover:w-10 bg-cyan-400'
                       : link.color === 'emerald'
-                        ? 'bg-emerald-400 group-hover:w-10'
+                        ? 'group-hover:w-4 xl:group-hover:w-10 bg-emerald-400'
                         : link.color === 'violet'
-                          ? 'bg-violet-400 group-hover:w-10'
-                          : 'bg-orange-400 group-hover:w-10'
+                          ? 'group-hover:w-4 xl:group-hover:w-10 bg-violet-400'
+                          : 'group-hover:w-4 xl:group-hover:w-10 bg-orange-400'
                   }
                 `}
               />

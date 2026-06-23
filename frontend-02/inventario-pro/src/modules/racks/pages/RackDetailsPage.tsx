@@ -41,6 +41,9 @@ export default function RackDetailsPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // CONTROLADOR DE VISIBILIDADE DO PAINEL DE FILTROS
+  const [showFilters, setShowFilters] = useState(false);
+
   // FILTROS
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -103,22 +106,21 @@ export default function RackDetailsPage() {
   if (!rack) return <div className="p-6 text-red-400 text-center font-medium bg-slate-950 min-h-screen">Rack não localizado</div>;
 
   return (
-    <div className="min-h-screen bg-[#070b12] p-6 text-slate-100 antialiased font-sans">
+    <div className="h-screen w-full bg-[#070b12] px-8 pt-2 pb-1 text-slate-100 antialiased font-sans overflow-hidden">
       
-      {/* GRID PRINCIPAL EM DOIS BLOCOS (ESQUERDA X DIREITA) DE ACORDO COM O PROTÓTIPO */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] items-stretch h-full">
         
         {/* ========================================================================= */}
-        {/* COLUNA ESQUERDA: ESTRUTURA FÍSICA COMPLETA DE ALTO A BAIXO                */}
+        {/* COLUNA ESQUERDA: ESTRUTURA FÍSICA COMPLETA (ROLAGEM ISOLADA)              */}
         {/* ========================================================================= */}
-        <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-4 shadow-xl">
-          <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-2">
+        <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-4 shadow-xl h-full flex flex-col overflow-y-auto shrink-0 custom-scrollbar">
+          <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-2 shrink-0">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-400">Estrutura Física</h2>
             <span className="text-[10px] text-slate-500 font-mono">Frente</span>
           </div>
           
           {/* O GAVETEIRO ESTRUTURAL DO RACK */}
-          <div className="w-full rounded-2xl border-[8px] border-[#182232] bg-[#111a24] p-1.5 shadow-2xl">
+          <div className="w-full rounded-2xl border-[8px] border-[#182232] bg-[#111a24] p-1.5 shadow-2xl shrink-0">
             <div className="flex flex-col-reverse gap-[2px]">
               {Array.from({ length: rack.capacidade }).map((_, index) => {
                 const unit = index + 1;
@@ -141,12 +143,10 @@ export default function RackDetailsPage() {
                         : 'bg-[#090f16] border border-white/[0.01]'
                     }`}
                   >
-                    {/* Réguas numéricas da lateral esquerda (U42, U41...) */}
                     <div className="flex-none flex w-8 h-full items-center justify-center border-r border-white/5 bg-slate-950/60 font-mono text-[9px] font-bold text-slate-400 select-none">
                       {String(unit).padStart(2, '0')}
                     </div>
 
-                    {/* Área útil onde os ativos são montados */}
                     <div className="flex-1 h-full relative">
                       {slotData ? (
                         isStart && asset ? (
@@ -182,7 +182,7 @@ export default function RackDetailsPage() {
 
           {/* LISTA AUXILIAR PARA ATIVOS VIRTUAIS ABAIXO DO RACK */}
           {virtualAssets.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-white/5">
+            <div className="mt-4 pt-3 border-t border-white/5 shrink-0">
               <h2 className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Ativos Virtuais</h2>
               <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
                 {virtualAssets.map((asset) => (
@@ -204,12 +204,12 @@ export default function RackDetailsPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* COLUNA DIREITA: CONTEÚDOS GERAIS E INFORMAÇÕES DETALHADAS                 */}
+        {/* COLUNA DIREITA: CONTEÚDOS GERAIS E DETALHES LÓGICOS                       */}
         {/* ========================================================================= */}
-        <div className="space-y-4">
+        <div className="space-y-4 h-full overflow-y-auto pr-1 pb-2 custom-scrollbar">
           
           {/* 1. BARRA SUPERIOR HEADER */}
-          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3 sticky top-0 bg-[#070b12] z-30">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-black tracking-tight text-white">{rack.nome}</h1>
@@ -226,7 +226,7 @@ export default function RackDetailsPage() {
           </div>
 
           {/* 2. CARD DE METADADOS HORIZONTAIS */}
-          <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+          <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-6">
               <div>
                 <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-500">Localização</span>
@@ -243,6 +243,21 @@ export default function RackDetailsPage() {
                 <span className="text-xs font-bold text-slate-200">
                   {filteredAssets.length} <span className="text-[10px] font-normal text-slate-500">de {assets.length}</span>
                 </span>
+              </div>
+
+              {/* 🟢 INTERRUPTOR ADICIONADO PERFEITAMENTE DEPOIS DO CAMPO 'ATIVOS NO FILTRO' */}
+              <div className="h-6 w-px bg-white/5" />
+              <div className="flex items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  id="toggle-filters"
+                  checked={showFilters}
+                  onChange={(e) => setShowFilters(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-800 text-cyan-400 focus:ring-0 cursor-pointer accent-cyan-400"
+                />
+                <label htmlFor="toggle-filters" className="text-[10px] font-black uppercase tracking-widest text-cyan-400 cursor-pointer hover:text-cyan-300 transition">
+                  Exibir Filtros
+                </label>
               </div>
             </div>
             
@@ -262,47 +277,50 @@ export default function RackDetailsPage() {
             </div>
           </div>
 
-          {/* 3. PAINEL DE FILTROS */}
-          <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-3 shadow-lg">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="flex-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Search size={14} /></span>
-                <input
-                  type="text"
-                  placeholder="Digite Hostname, Apelido, Modelo ou Patrimônio..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl border border-white/5 bg-slate-950/60 pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 outline-none transition focus:border-emerald-500/40"
-                />
-              </div>
+          {/* 3. PAINEL DE FILTROS CONDICIONAL */}
+          {/* 🟢 EXIBIDO APENAS SE O CHECKBOX ESTIVER SELECIONADO */}
+          {showFilters && (
+            <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-3 shadow-lg animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="flex-1 relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Search size={14} /></span>
+                  <input
+                    type="text"
+                    placeholder="Digite Hostname, Apelido, Modelo ou Patrimônio..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full rounded-xl border border-white/5 bg-slate-950/60 pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 outline-none transition focus:border-emerald-500/40"
+                  />
+                </div>
 
-              <div className="flex items-center gap-2">
-                <select
-                  value={filterTipo}
-                  onChange={(e) => setFilterTipo(e.target.value)}
-                  className="rounded-xl border border-white/5 bg-slate-950/60 px-2.5 py-2 text-xs text-slate-300 outline-none"
-                >
-                  <option value="">Todos os Tipos</option>
-                  {uniqueTipos.map((tipo) => (
-                    <option key={tipo} value={tipo}>{tipo.replace('_', ' ')}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={filterTipo}
+                    onChange={(e) => setFilterTipo(e.target.value)}
+                    className="rounded-xl border border-white/5 bg-slate-950/60 px-2.5 py-2 text-xs text-slate-300 outline-none cursor-pointer"
+                  >
+                    <option value="">Todos os Tipos</option>
+                    {uniqueTipos.map((tipo) => (
+                      <option key={tipo} value={tipo}>{tipo.replace('_', ' ')}</option>
+                    ))}
+                  </select>
 
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="rounded-xl border border-white/5 bg-slate-950/60 px-2.5 py-2 text-xs text-slate-300 outline-none"
-                >
-                  <option value="">Todos os Status</option>
-                  {uniqueStatus.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="rounded-xl border border-white/5 bg-slate-950/60 px-2.5 py-2 text-xs text-slate-300 outline-none cursor-pointer"
+                  >
+                    <option value="">Todos os Status</option>
+                    {uniqueStatus.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* 4. TELA GRANDE DE DETALHES DO ATIVO (IGUAL AO SEU PRINT) */}
+          {/* 4. TELA GRANDE DE DETALHES DO ATIVO */}
           <div className="rounded-2xl border border-white/5 bg-[#0d1520] p-6 shadow-xl min-h-[500px] flex flex-col justify-between">
             {!selectedAsset ? (
               <div className="w-full my-auto flex items-center justify-center">
@@ -316,7 +334,7 @@ export default function RackDetailsPage() {
                   <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
                     <button
                       onClick={() => setSelectedAsset(null)}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-slate-950/60 px-2.5 py-1.5 text-xs font-bold text-slate-400 transition hover:text-slate-200"
+                      className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-slate-955/60 px-2.5 py-1.5 text-xs font-bold text-slate-400 transition hover:text-slate-200"
                     >
                       <ArrowLeft size={12} /> Fechar Detalhes
                     </button>
@@ -334,7 +352,6 @@ export default function RackDetailsPage() {
                     {selectedAsset.apelido && <p className="text-xs text-slate-400 mt-0.5">{selectedAsset.apelido}</p>}
                   </div>
 
-                  {/* FORMULÁRIOS DE INFORMAÇÕES TÉCNICAS */}
                   <div className="space-y-3">
                     <div className="rounded-xl border border-white/5 bg-slate-950/20 p-3">
                       <div className="mb-2 flex items-center gap-2 border-b border-white/5 pb-1">
@@ -387,7 +404,6 @@ export default function RackDetailsPage() {
                   </div>
                 </div>
 
-                {/* OBSERVACÕES FIXADAS */}
                 <div className="rounded-xl border border-white/5 bg-slate-950/40 p-3 mt-2">
                   <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Observações Internas</span>
                   <p className="mt-1 text-xs leading-relaxed text-slate-300 whitespace-pre-wrap">

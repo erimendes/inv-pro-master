@@ -6,8 +6,8 @@ import { canViewModule } from '../../constants/roles'; // 🔄 Importa a valida�
 import { 
   LayoutDashboard, 
   Server, 
-  Laptop, 
-  Layers3, 
+  Laptop,
+  Boxes,
   Users, 
   ChevronLeft, 
   ChevronRight 
@@ -21,10 +21,10 @@ export default function Sidebar() {
 
   // 🎯 MAPEAMENTO: Adicionada a chave 'module' para bater certinho com o PERMISSION_MAP
   const allMenuItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, module: 'dashboard' as const },
+    { label: 'Painel', path: '/dashboard', icon: <LayoutDashboard size={20} />, module: 'dashboard' as const },
     { label: 'Racks', path: '/racks', icon: <Server size={20} />, module: 'racks' as const },
     { label: 'Ativos', path: '/assets', icon: <Laptop size={20} />, module: 'assets' as const },
-    { label: 'Aplicações', path: '/applications', icon: <Layers3 size={20} />, module: 'applications' as const },
+    { label: 'Aplicações', path: '/applications', icon: <Boxes size={20} />, module: 'applications' as const },
     { label: 'Usuários', path: '/users', icon: <Users size={20} />, module: 'users' as const },
   ];
 

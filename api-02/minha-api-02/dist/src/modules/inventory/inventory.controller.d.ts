@@ -4,25 +4,25 @@ export declare class InventoryController {
     constructor(inventoryService: InventoryService);
     getByTag(tag: string): Promise<({
         user: {
-            ativo: boolean;
-            name: string | null;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
             username: string;
             email: string;
             password: string | null;
+            name: string | null;
             authProvider: import("../../../generated/prisma/enums").AuthProvider;
             role: import("../../../generated/prisma/enums").Role;
             departamento: string | null;
             ultimoLogin: Date | null;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
         } | null;
         configsRede: {
             id: number;
             createdAt: Date;
-            macAddress: string | null;
             updatedAt: Date;
+            macAddress: string | null;
             ipAddress: string | null;
             gateway: string | null;
             mascara: string | null;
@@ -38,8 +38,11 @@ export declare class InventoryController {
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
         fabricante: string | null;
@@ -69,7 +72,6 @@ export declare class InventoryController {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -81,30 +83,28 @@ export declare class InventoryController {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }) | null>;
     findAll(): Promise<({
         user: {
-            ativo: boolean;
-            name: string | null;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
             username: string;
             email: string;
             password: string | null;
+            name: string | null;
             authProvider: import("../../../generated/prisma/enums").AuthProvider;
             role: import("../../../generated/prisma/enums").Role;
             departamento: string | null;
             ultimoLogin: Date | null;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
         } | null;
         configsRede: {
             id: number;
             createdAt: Date;
-            macAddress: string | null;
             updatedAt: Date;
+            macAddress: string | null;
             ipAddress: string | null;
             gateway: string | null;
             mascara: string | null;
@@ -120,8 +120,11 @@ export declare class InventoryController {
         }[];
     } & {
         id: number;
-        userId: string | null;
         createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        userId: string | null;
+        observacoes: string | null;
         patrimonio: string | null;
         tipo: import("../../../generated/prisma/enums").AtivoTipo;
         fabricante: string | null;
@@ -151,7 +154,6 @@ export declare class InventoryController {
         garantiaFim: Date | null;
         valor: import("@prisma/client-runtime-utils").Decimal | null;
         fornecedor: string | null;
-        observacoes: string | null;
         isVirtualizado: boolean;
         hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
         vmId: string | null;
@@ -163,7 +165,5 @@ export declare class InventoryController {
         tamanhoU: number | null;
         glpiId: number | null;
         glpiLastSync: Date | null;
-        updatedAt: Date;
-        deletedAt: Date | null;
     })[]>;
 }

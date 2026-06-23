@@ -16,6 +16,7 @@ type AtivoCSV = {
   ipPrincipal?: string;
   sistemaOperacional?: string;
   oQueRoda?: string;
+  apelido?: string;       // 👈 ADICIONE ESTA LINHA AQUI
   patrimonio?: string;
   serial?: string;
   cpu?: string;
@@ -117,7 +118,7 @@ export async function seedAtivos(prisma: PrismaClient) {
           tamanhoU: tamU,
           posicaoRack: posRack,
           sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido) || toStr(row.oQueRoda),
+          apelido: toStr(row.oQueRoda),
           patrimonio: patrimonioFinal,
           serial: serialFinal,
           cpu: toStr(row.cpu),
@@ -139,7 +140,7 @@ export async function seedAtivos(prisma: PrismaClient) {
           tamanhoU: tamU,
           posicaoRack: posRack,
           sistemaOperacional: toStr(row.sistemaOperacional),
-          apelido: toStr(row.apelido) || toStr(row.oQueRoda),
+          apelido: toStr(row.oQueRoda),
           patrimonio: patrimonioFinal!,
           serial: serialFinal,
           cpu: toStr(row.cpu),

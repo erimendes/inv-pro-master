@@ -1,139 +1,114 @@
-import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Mail, Shield, Eye, Pencil, Trash2, Crown, UserCog, User } from 'lucide-react';
+// src/modules/users/components/UserCard.tsx
+import React from 'react';
+import { useNavigate } from 'react-router-dom'; // 🟢 Restaurado o hook de navegação
+import { ChevronRight, Mail, Shield, Eye, Pencil, Trash2 } from 'lucide-react';
 
 interface UserCardProps {
-  user: any;
+  user: {
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    username?: string;
+  };
   opened: boolean;
   onToggle: () => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void; // Apenas a deleção continua vindo do pai
 }
 
-// Helpers isolados
-function getRoleColor(role?: string) {
-  switch (role) {
-    case 'ADMIN': return 'text-red-400 border-red-500/30 bg-red-500/10';
-    case 'MANAGER': return 'text-orange-400 border-orange-500/30 bg-orange-500/10';
-    case 'USER': return 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10';
-    default: return 'text-slate-400 border-slate-500/20 bg-slate-500/10';
-  }
-}
-
-function getRoleIcon(role?: string) {
-  switch (role) {
-    case 'ADMIN': return <Crown size={18} />;
-    case 'MANAGER': return <UserCog size={18} />;
-    default: return <User size={18} />;
-  }
-}
-
-function getInitials(name?: string) {
-  if (!name) return 'US';
-  const parts = name.split(' ');
-  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
-}
-
-function InfoRow({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-slate-500">{label}</span>
-      <div className="flex items-center gap-2 font-bold text-slate-200">
-        {icon}
-        <span className="max-w-[140px] truncate">{value}</span>
-      </div>
-    </div>
-  );
-}
-
-export function UserCard({ user, opened, onToggle, onDelete }: UserCardProps) {
-  const navigate = useNavigate();
+export const UserCard: React.FC<UserCardProps> = ({
+  user,
+  opened,
+  onToggle,
+  onDelete,
+}) => {
+  const navigate = useNavigate(); // 🟢 Inicializado o navigate internamente
 
   return (
     <div
       onClick={onToggle}
-      className={`relative overflow-hidden rounded-3xl border border-slate-800 bg-[#0b1120] p-6 transition-all duration-300 hover:border-cyan-500/30 hover:bg-slate-900 cursor-pointer min-h-[300px] h-full`}
+      className={`relative overflow-hidden rounded-2xl border bg-[#0b1120] p-3.5 h-[120px] transition-all duration-300 hover:bg-slate-900 cursor-pointer select-none flex flex-col justify-between ${
+        opened ? 'border-cyan-500 bg-[#0c1324] ring-2 ring-cyan-500/5' : 'border-slate-800/80 hover:border-slate-700'
+      }`}
     >
-      {/* HEADER CARD */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/10 text-lg font-black text-cyan-400">
-            {getInitials(user.name)}
+      {/* HEADER COMPACTO */}
+      <div className="flex items-start justify-between min-w-0 w-full">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {/* Iniciais do nome */}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 font-black text-xs uppercase">
+            {user.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2) : '??'}
           </div>
-          <div>
-            <h2 className="max-w-[140px] truncate text-xl font-black leading-tight text-white">
-              {user.name}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-black text-white truncate tracking-tight">
+              {user.name || 'Sem nome'}
             </h2>
-            <p className="mt-1 text-sm uppercase tracking-widest text-slate-500">
-              {user.role}
+            <p className="text-[9px] uppercase tracking-wider text-slate-500 font-bold mt-0.5">
+              {user.username || 'user'}
             </p>
           </div>
         </div>
-        <ChevronRight
-          className={`mt-1 text-slate-600 transition-transform duration-300 ${opened ? 'rotate-90' : ''}`}
-        />
+        <ChevronRight className={`text-slate-600 transition-transform duration-300 flex-shrink-0 ml-1 mt-1 ${opened ? 'rotate-90' : ''}`} size={16} />
       </div>
 
-      {/* ROLE TAG */}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <span className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-black uppercase tracking-widest ${getRoleColor(user.role)}`}>
-          {getRoleIcon(user.role)}
-          {user.role}
-        </span>
+      {/* METADADOS / INFOS DO CARD */}
+      <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-400">
+        <div className="flex items-center gap-1.5 truncate">
+          <Mail size={11} className="text-cyan-400 shrink-0" />
+          <span className="truncate font-semibold text-slate-300">{user.email}</span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Shield size={11} className="text-emerald-500 shrink-0" />
+          <span className="font-black uppercase text-[9px] tracking-wider text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-1.5 py-0.5 rounded">
+            {user.role}
+          </span>
+        </div>
       </div>
 
-      {/* INFO BODY */}
-      <div className="mt-8 space-y-4">
-        <InfoRow
-          label="Email"
-          value={user.email || '-'}
-          icon={<Mail size={15} className="text-cyan-400" />}
-        />
-        <InfoRow
-          label="Perfil"
-          value={user.role || '-'}
-          icon={<Shield size={15} className="text-emerald-400" />}
-        />
-      </div>
-
-      {/* ACTIONS DRAWER */}
-      <div
+      {/* PAINEL DE AÇÕES FLUTUANTE */}
+      <div 
         className={`absolute inset-x-0 bottom-0 border-t border-slate-800 bg-[#0f172a]/95 backdrop-blur-xl transition-all duration-300 ${
           opened ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
         }`}
       >
-        <div className="flex items-center gap-3 p-4">
+        <div 
+          className="grid grid-cols-3 gap-1.5 p-2 w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Botão VER - 🟢 Corrigido para navegar diretamente de forma autônoma */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/users/${user.id}`);
-            }}
-            className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400"
+            onClick={() => navigate(`/users/${user.id}`)}
+            className="flex items-center justify-center gap-1 py-1.5 px-2 w-full rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-[11px] font-black uppercase tracking-normal transition cursor-pointer"
           >
-            <div className="flex items-center justify-center gap-2">
-              <Eye size={16} /> Detalhes
+            <Eye size={12} className="text-slate-400" />
+            <span>VER</span>
+          </button>
+
+          {/* Botão ALTERAR (ALT) - 🟢 Corrigido para navegar diretamente de forma autônoma */}
+          <button
+            onClick={() => navigate(`/users/${user.id}/edit`)}
+            className="flex items-center justify-center gap-1 py-1.5 px-2 w-full rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 text-[11px] font-black uppercase tracking-normal transition cursor-pointer"
+          >
+            <Pencil size={11} className="text-cyan-400" />
+            <span>ALT</span>
+          </button>
+
+          {/* Botão DELETAR (DEL) */}
+          {onDelete ? (
+            <button 
+              onClick={() => onDelete(user.id)} 
+              className="flex items-center justify-center gap-1 py-1.5 px-2 w-full rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-[11px] font-black uppercase tracking-normal transition cursor-pointer"
+            >
+              <Trash2 size={11} className="text-red-400" />
+              <span>DEL</span>
+            </button>
+          ) : (
+            <div className="py-1.5 rounded-xl bg-slate-900/40 border border-slate-900/60 text-slate-600 text-[10px] font-black uppercase text-center opacity-40 select-none">
+              Lock
             </div>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/users/${user.id}/edit`);
-            }}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-white transition hover:bg-blue-400"
-          >
-            <Pencil size={18} />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(user.id);
-            }}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-400"
-          >
-            <Trash2 size={18} />
-          </button>
+          )}
         </div>
       </div>
+
     </div>
   );
-}
+};

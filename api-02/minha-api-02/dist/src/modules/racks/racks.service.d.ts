@@ -7,19 +7,22 @@ export declare class RacksService {
     create(data: CreateRackDto): Promise<{
         id: string;
         createdAt: Date;
-        observacoes: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
+        observacoes: string | null;
     }>;
     findAll(): Promise<({
         ativos: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -49,7 +52,6 @@ export declare class RacksService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -61,25 +63,26 @@ export declare class RacksService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        observacoes: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
+        observacoes: string | null;
     })[]>;
     findOne(id: string): Promise<{
         ativos: {
             id: number;
-            userId: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            userId: string | null;
+            observacoes: string | null;
             patrimonio: string | null;
             tipo: import("../../../generated/prisma/enums").AtivoTipo;
             fabricante: string | null;
@@ -109,7 +112,6 @@ export declare class RacksService {
             garantiaFim: Date | null;
             valor: import("@prisma/client-runtime-utils").Decimal | null;
             fornecedor: string | null;
-            observacoes: string | null;
             isVirtualizado: boolean;
             hypervisor: import("../../../generated/prisma/enums").HypervisorTipo | null;
             vmId: string | null;
@@ -121,40 +123,38 @@ export declare class RacksService {
             tamanhoU: number | null;
             glpiId: number | null;
             glpiLastSync: Date | null;
-            updatedAt: Date;
-            deletedAt: Date | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        observacoes: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
+        observacoes: string | null;
     }>;
     update(id: string, data: UpdateRackDto): Promise<{
         id: string;
         createdAt: Date;
-        observacoes: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
+        observacoes: string | null;
     }>;
     remove(id: string): Promise<{
         id: string;
         createdAt: Date;
-        observacoes: string | null;
         updatedAt: Date;
         deletedAt: Date | null;
         nome: string;
         localizacao: string | null;
         corredor: string | null;
         capacidade: number;
+        observacoes: string | null;
     }>;
 }

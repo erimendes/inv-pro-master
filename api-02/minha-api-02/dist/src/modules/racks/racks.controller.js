@@ -19,6 +19,7 @@ const swagger_1 = require("@nestjs/swagger");
 const racks_service_1 = require("./racks.service");
 const create_rack_dto_1 = require("./dto/create-rack.dto");
 const update_rack_dto_1 = require("./dto/update-rack.dto");
+const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 let RacksController = class RacksController {
     racksService;
     constructor(racksService) {
@@ -43,6 +44,7 @@ let RacksController = class RacksController {
 exports.RacksController = RacksController;
 __decorate([
     (0, common_1.Post)(),
+    (0, roles_decorator_1.CheckPermission)('racks', 'modify'),
     (0, swagger_1.ApiOperation)({
         summary: 'Criar rack',
     }),
@@ -54,6 +56,7 @@ __decorate([
 ], RacksController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, roles_decorator_1.CheckPermission)('racks', 'view'),
     (0, swagger_1.ApiOperation)({
         summary: 'Listar racks',
     }),
@@ -64,6 +67,7 @@ __decorate([
 ], RacksController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.CheckPermission)('racks', 'view'),
     (0, swagger_1.ApiOperation)({
         summary: 'Buscar rack por ID',
     }),
@@ -75,6 +79,7 @@ __decorate([
 ], RacksController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, roles_decorator_1.CheckPermission)('racks', 'modify'),
     (0, swagger_1.ApiOperation)({
         summary: 'Atualizar rack',
     }),
@@ -87,6 +92,7 @@ __decorate([
 ], RacksController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.CheckPermission)('racks', 'modify'),
     (0, swagger_1.ApiOperation)({
         summary: 'Remover rack',
     }),

@@ -1,6 +1,4 @@
-// ===============================================
-// RackIncludeAssetsPage.tsx
-// ===============================================
+// src/modules/racks/pages/RackIncludeAssetsPage.tsx
 
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,15 +16,30 @@ type Rack = {
 };
 
 const ALLOWED_TYPES = ['SERVIDOR_FISICO', 'SWITCH', 'ROTEADOR', 'STORAGE'];
-const UNIT_HEIGHT = 48; // Altura confortável para os slots U
+const UNIT_HEIGHT = 48;
 
-// Força o tamanho mínimo de 1U caso o banco retorne NULL, 0 ou NaN
 function getAssetSize(asset?: Asset): number {
   const size = parseInt(String(asset?.tamanhoU ?? '1'), 10);
-  if (isNaN(size) || size <= 0) {
-    return 1;
-  }
+  if (isNaN(size) || size <= 0) return 1;
   return size;
+}
+
+const ASSET_IMAGES: Record<string, string> = {
+  'SERVIDOR_FISICO_1U': '/assets/images/servidor_1u.png',
+  'SERVIDOR_FISICO_2U': '/assets/images/servidor_2u.png',
+  'SERVIDOR_FISICO_4U': '/assets/images/servidor_4u.png',
+  'SWITCH': '/assets/images/switch.png',
+  'ROTEADOR': '/assets/images/roteador.png',
+  'STORAGE': '/assets/images/storage.png',
+};
+
+function getAssetFrontImage(asset: Asset): string | null {
+  const size = getAssetSize(asset);
+  const type = asset.tipo ?? '';
+  const keyWithSize = `${type}_${size}U`;
+  if (ASSET_IMAGES[keyWithSize]) return ASSET_IMAGES[keyWithSize];
+  if (ASSET_IMAGES[type]) return ASSET_IMAGES[type];
+  return null;
 }
 
 export default function RackIncludeAssetsPage() {
@@ -47,46 +60,36 @@ export default function RackIncludeAssetsPage() {
 
         const allAssets = await assetsService.getAll();
 
-        // NORMALIZAÇÃO CRÍTICA: Compara os IDs convertendo ambos para String 
-        // para evitar falhas se um for Number e o outro String.
         const available = allAssets.filter(
-          (asset: Asset) => 
-            !asset.rackId && ALLOWED_TYPES.includes(asset.tipo ?? '')
+          (asset: Asset) => !asset.rackId && ALLOWED_TYPES.includes(asset.tipo ?? '')
         );
         
         const allocated = allAssets.filter(
-          (asset: Asset) => 
-            asset.rackId && String(asset.rackId) === String(id)
+          (asset: Asset) => asset.rackId && String(asset.rackId) === String(id)
         );
 
         setAvailableAssets(available);
         setAllocatedAssets(allocated);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
-      } finally {
+      } // 🟢 LIMPO: O texto corrompido 'fill/all' que estava causando o crash foi removido daqui!
+      finally {
         setLoading(false);
       }
     }
     loadData();
   }, [id]);
 
-  // Cria um mapa indexado por Unidade do Rack para renderização estável
   const rackMap = useMemo(() => {
     const map: Record<number, { asset: Asset; isStart: boolean }> = {};
-    
     allocatedAssets.forEach((asset) => {
       const start = Number(asset.posicaoRack);
       if (!start) return;
-      
       const size = getAssetSize(asset);
       for (let i = 0; i < size; i++) {
-        map[start + i] = {
-          asset,
-          isStart: i === 0,
-        };
+        map[start + i] = { asset, isStart: i === 0 };
       }
     });
-    
     return map;
   }, [allocatedAssets]);
 
@@ -103,83 +106,59 @@ export default function RackIncludeAssetsPage() {
 
     if (!asset) return;
 
-    // 1. DEVOLVER PARA A LISTA EXTERNA (REMOVER DO RACK)
     if (overId === 'available-assets') {
-      if (!asset.rackId) return;
-
       try {
-        // BLINDAGEM: Passamos undefined ou o que o backend espera em vez de null bruto se a tipagem proibir
         await assetsService.update(String(asset.id), {
-          rackId: undefined,
-          posicaoRack: undefined,
+          rackId: null,
+          posicaoRack: null,
           tamanhoU: getAssetSize(asset),
         });
-
+        
         setAllocatedAssets((prev) => prev.filter((a) => String(a.id) !== activeId));
-        
-        // CORREÇÃO DE TIPO: Usamos o Typecast ou propriedades opcionais seguras
-        const unallocatedAsset: Asset = { 
-          ...asset, 
-          rackId: undefined, 
-          posicaoRack: undefined 
-        };
-        
-        setAvailableAssets((prev) => [...prev, unallocatedAsset]);
+        setAvailableAssets((prev) => {
+          if (prev.some((a) => String(a.id) === activeId)) return prev;
+          const unallocatedAsset: Asset = { ...asset, rackId: undefined, posicaoRack: undefined };
+          return [...prev, unallocatedAsset];
+        });
       } catch (error) {
-        console.error(error);
-        alert('Erro ao remover ativo do rack.');
+        console.error('Erro ao desalocar ativo:', error);
       }
       return;
     }
 
-    // 2. ADICIONAR OU REMANEJAR DENTRO DO RACK
     const targetPosition = Number(overId);
     if (isNaN(targetPosition)) return;
 
     const assetSize = getAssetSize(asset);
 
-    // Validação de limite físico do rack
     if (rack && targetPosition + assetSize - 1 > rack.capacidade) {
       alert('O equipamento ultrapassa os limites físicos superiores do rack.');
       return;
     }
 
-    // Validação de sobreposição de espaço (colisão)
     const isOccupied = allocatedAssets.some((a) => {
       if (String(a.id) === activeId) return false; 
-
       const start = Number(a.posicaoRack || 0);
       const size = getAssetSize(a);
       const end = start + size - 1;
       const targetEnd = targetPosition + assetSize - 1;
-
       return !(targetEnd < start || targetPosition > end);
     });
 
     if (isOccupied) {
-      alert('Esta posição ou o espaço necessário acima dela já está ocupado.');
+      alert('Esta posição já está ocupada.');
       return;
     }
 
     try {
-      // Garante a correspondência estrita de tipo (String se o ID da rota for string)
       const safeRackId = String(rack ? rack.id : id);
-
-      // GRAVAÇÃO CORRETA: Envia as variáveis reais da nova posição para a API
       await assetsService.update(String(asset.id), {
         rackId: safeRackId,
         posicaoRack: targetPosition,
         tamanhoU: assetSize,
       });
-
-      // CORREÇÃO DE TIPO: Mapeado estritamente para a assinatura do Asset
-      const updatedAsset: Asset = { 
-        ...asset, 
-        rackId: safeRackId, 
-        posicaoRack: targetPosition 
-      };
-
-      // Atualiza o estado da tela localmente de forma sincronizada
+      const updatedAsset: Asset = { ...asset, rackId: safeRackId, posicaoRack: targetPosition };
+      
       setAvailableAssets((prev) => prev.filter((a) => String(a.id) !== activeId));
       setAllocatedAssets((prev) => {
         const filtered = prev.filter((a) => String(a.id) !== activeId);
@@ -187,7 +166,6 @@ export default function RackIncludeAssetsPage() {
       });
     } catch (error) {
       console.error(error);
-      alert('Erro ao salvar alocação do ativo no servidor.');
     }
   }
 
@@ -196,65 +174,76 @@ export default function RackIncludeAssetsPage() {
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-      <div className="min-h-screen bg-slate-950 p-6 text-white">
-        {/* HEADER */}
-        <div className="mb-8 flex items-center justify-between">
+      <div className="h-screen w-full bg-slate-950 px-8 pt-2 pb-1 text-white flex flex-col overflow-hidden min-h-0">
+        
+        {/* HEADER COMPACTADO */}
+        <div className="mb-3 flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-3xl font-bold">Alocar Ativos</h1>
-            <p className="mt-2 text-slate-400">
+            <h1 className="text-3xl font-black tracking-tight">Alocar Ativos</h1>
+            <p className="mt-0.5 text-xs text-slate-400">
               Mova os ativos entre a listagem e as gavetas exclusivas do Rack.
             </p>
           </div>
           <button
             onClick={() => navigate(`/racks/${id}`)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-slate-300 hover:bg-slate-800 transition"
+            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-1.5 text-xs font-bold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
           >
             ← Voltar
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[440px_1fr]">
-          {/* PAINEL DO RACK */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-4 text-xl font-semibold">Rack: {rack.nome}</h2>
-            <div className="mx-auto w-[340px] rounded-xl border-[12px] border-slate-700 bg-slate-800 p-3 shadow-2xl">
-              {/* PROCURA ESTE TRECHO NO TEU PAINEL DO RACK E DEIXA ASSIM: */}
-              <div className="flex flex-col-reverse gap-[2px]">
-                {Array.from({ length: rack.capacidade }).map((_, index) => {
-                  const unit = index + 1;
-                  const slotData = rackMap[unit];
+        {/* CONTAINER DO GRID */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[440px_1fr] flex-1 min-h-0 overflow-hidden">
+          
+          {/* PAINEL DO RACK (ESQUERDA) */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 flex flex-col h-full min-h-0 overflow-hidden">
+            <h2 className="mb-2 text-base font-black uppercase text-slate-400 tracking-wider shrink-0">
+              Rack: {rack.nome}
+            </h2>
+            
+            <div className="w-full flex-1 overflow-y-auto pr-1 py-1 min-h-0 custom-scrollbar max-h-[calc(100vh-130px)]">
+              <div className="mx-auto w-[340px] rounded-xl border-[12px] border-slate-700 bg-slate-800 p-3 shadow-2xl">
+                <div className="flex flex-col-reverse gap-[2px]">
+                  {Array.from({ length: rack.capacidade }).map((_, index) => {
+                    const unit = index + 1;
+                    const slotData = rackMap[unit];
 
-                  // APAGAMOS a linha "if (slotData && !slotData.isStart) return null;"
-
-                  return (
-                    <RackSlot
-                      key={unit}
-                      unit={unit}
-                      asset={slotData?.asset}
-                      isStart={slotData?.isStart} // <-- Passamos se é o início do ativo
-                      hasAsset={!!slotData}       // <-- Passamos se tem algum ativo ali
-                    />
-                  );
-                })}
+                    return (
+                      <RackSlot
+                        key={unit}
+                        unit={unit}
+                        asset={slotData?.asset}
+                        isStart={slotData?.isStart}
+                        hasAsset={!!slotData}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* PAINEL DE DISPONÍVEIS */}
+          {/* PAINEL DE DISPONÍVEIS (DIREITA) */}
           <DroppableList>
-            <h2 className="mb-4 text-xl font-semibold text-slate-200">Ativos Sem Posição</h2>
-            {availableAssets.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 text-sm text-slate-500">
-                Nenhum ativo disponível no momento.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {availableAssets.map((asset) => (
-                  <DraggableAsset key={asset.id} asset={asset} />
-                ))}
-              </div>
-            )}
+            <h2 className="mb-2 text-base font-black uppercase text-slate-400 tracking-wider shrink-0">
+              Ativos Sem Posição
+            </h2>
+            
+            <div className="flex-1 overflow-y-auto pr-1 min-h-0 max-h-[calc(100vh-130px)]">
+              {availableAssets.length === 0 ? (
+                <div className="flex h-[200px] items-center justify-center rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/40 text-sm text-slate-500">
+                  Nenhum ativo disponível no momento.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 content-start">
+                  {availableAssets.map((asset) => (
+                    <DraggableAsset key={asset.id} asset={asset} />
+                  ))}
+                </div>
+              )}
+            </div>
           </DroppableList>
+          
         </div>
       </div>
     </DndContext>
@@ -278,46 +267,39 @@ function RackSlot({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: unit.toString() });
   
-  // O tamanho do bloco que vai flutuar de forma absoluta
   const size = asset ? getAssetSize(asset) : 1;
-  // Multiplica a altura padrão + compensa os gaps de 2px entre as gavetas
   const computedHeight = size * UNIT_HEIGHT + (size - 1) * 2; 
 
   return (
     <div
       ref={setNodeRef}
-      style={{ height: `${UNIT_HEIGHT}px` }} // Cada slot de U tem sempre tamanho fixo agora
-      className={`relative flex items-stretch gap-2 rounded border transition-all duration-200 ${
+      style={{ height: `${UNIT_HEIGHT}px` }}
+      className={`relative flex items-stretch gap-2 rounded border transition-all duration-200 shrink-0 ${
         isOver
           ? 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
           : 'border-slate-700/50 bg-slate-900/40'
       }`}
     >
-      {/* Indicador lateral da U - Este NUNCA some e aparece em todas as linhas! */}
       <div className="flex w-10 items-center justify-center border-r border-slate-800 bg-slate-950/40 font-mono text-xs font-bold text-slate-500 select-none">
         U{unit}
       </div>
 
-      {/* Área do conteúdo do equipamento */}
       <div className="flex-1 p-1 relative">
-        {/* Se este slot for o início do equipamento, renderiza-o com tamanho expandido absoluto */}
         {hasAsset ? (
           isStart && asset ? (
             <div 
-              className="absolute left-1 right-1 bottom-1" // Alinha perfeitamente na base do slot inicial
+              className="absolute left-1 right-1 bottom-1" 
               style={{ 
-                height: `${computedHeight - 8}px`, // Subtrai o padding interno do container
+                height: `${computedHeight - 8}px`,
                 zIndex: 10 
               }}
             >
               <DraggableAsset asset={asset} isInsideRack />
             </div>
           ) : (
-            // Slots do "meio" ou "topo" do equipamento ficam vazios (o bloco absoluto de baixo vai cobri-los)
             <div className="h-full w-full pointer-events-none" />
           )
         ) : (
-          // Slot totalmente vazio e disponível para receber drops
           <div className="h-full w-full rounded border border-dashed border-slate-800/60 bg-slate-950/10" />
         )}
       </div>
@@ -331,7 +313,7 @@ function DroppableList({ children }: { children: React.ReactNode }) {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-2xl border p-6 transition-all min-h-[500px] ${
+      className={`rounded-2xl border p-4 transition-all h-full flex flex-col min-h-0 overflow-hidden ${
         isOver
           ? 'border-cyan-500 bg-cyan-950/10 shadow-[inset_0_0_20px_rgba(6,182,212,0.1)]'
           : 'border-slate-800 bg-slate-900'
@@ -350,9 +332,11 @@ function DraggableAsset({ asset, isInsideRack = false }: { asset: Asset; isInsid
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: 50,
+        zIndex: 100,
       }
     : undefined;
+
+  const imageSrc = (asset as any).imagemUrl || getAssetFrontImage(asset);
 
   return (
     <div
@@ -360,25 +344,53 @@ function DraggableAsset({ asset, isInsideRack = false }: { asset: Asset; isInsid
       style={style}
       {...listeners}
       {...attributes}
-      className={`group flex h-full w-full cursor-grab flex-col justify-center rounded-md bg-slate-950 p-2.5 shadow-md border active:cursor-grabbing transition-colors select-none ${
+      className={`group relative flex h-full w-full cursor-grab flex-col justify-center overflow-hidden rounded-sm bg-slate-950 shadow-md border active:cursor-grabbing transition-all select-none ${
         isDragging ? 'opacity-30' : 'opacity-100'
       } ${
         isInsideRack 
-          ? 'border-emerald-500/30 hover:border-emerald-400 bg-gradient-to-r from-slate-950 to-slate-900' 
-          : 'border-slate-800 hover:border-cyan-500'
+          ? 'border-zinc-800 hover:border-cyan-500 bg-zinc-900' 
+          : 'border-slate-800 hover:border-cyan-500 p-2.5 h-[52px]'
       }`}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-sm text-cyan-400 truncate max-w-[180px]">
-          {asset.hostname || asset.modelo}
-        </span>
-        <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-500 border border-slate-800">
-          {getAssetSize(asset)}U
-        </span>
-      </div>
-      <div className="mt-0.5 text-[11px] text-slate-400 truncate">
-        {asset.tipo?.replace('_', ' ') || ''}
-      </div>
+      {imageSrc ? (
+        <div className="absolute inset-0 h-full w-full bg-black">
+          <img 
+            src={imageSrc} 
+            alt="Hardware" 
+            className="h-full w-full object-cover object-center pointer-events-none group-hover:brightness-125 transition-all"
+          />
+          <div className="absolute inset-0 pointer-events-none shadow-[inset_0_1px_3px_rgba(0,0,0,0.8),_inset_0_-1px_3px_rgba(0,0,0,0.8)] bg-black/10 group-hover:bg-black/0 transition-colors" />
+        </div>
+      ) : null}
+
+      {isInsideRack && imageSrc ? (
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2 pointer-events-none">
+          <div className="rounded bg-black/75 backdrop-blur-xs px-1.5 py-0.5 border border-zinc-800/80">
+            <span className="font-mono text-xs font-bold text-cyan-400 drop-shadow-md">
+              {asset.hostname || asset.modelo}
+            </span>
+          </div>
+          {getAssetSize(asset) > 1 && (
+            <span className="rounded bg-black/60 px-1 py-0.5 text-[9px] font-mono font-bold text-zinc-400">
+              {getAssetSize(asset)}U
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="relative z-10 w-full">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm text-cyan-400 truncate max-w-[180px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              {asset.hostname || asset.modelo}
+            </span>
+            <span className="rounded bg-slate-900/90 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-400 border border-slate-800">
+              {getAssetSize(asset)}U
+            </span>
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-300 truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {asset.tipo?.replace('_', ' ') || ''}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

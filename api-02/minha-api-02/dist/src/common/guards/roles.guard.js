@@ -13,27 +13,38 @@ exports.RolesGuard = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const roles_decorator_1 = require("../decorators/roles.decorator");
+const roles_1 = require("../../config/roles");
 let RolesGuard = class RolesGuard {
     reflector;
     constructor(reflector) {
         this.reflector = reflector;
     }
     canActivate(context) {
-        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [
+        const request = context.switchToHttp().getRequest();
+        const user = request.user;
+        const module = this.reflector.getAllAndOverride(roles_decorator_1.PERMISSION_MODULE_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
-        if (!requiredRoles || requiredRoles.length === 0) {
+        const action = this.reflector.getAllAndOverride(roles_decorator_1.PERMISSION_ACTION_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!module) {
             return true;
         }
-        const request = context.switchToHttp().getRequest();
-        const user = request.user;
         if (!user || !user.role) {
-            throw new common_1.ForbiddenException('Acesso negado: Perfil de usuário não identificado');
+            throw new common_1.ForbiddenException('Acesso negado: Usuário não identificado para este módulo.');
         }
-        const hasRole = requiredRoles.includes(user.role);
-        if (!hasRole) {
-            throw new common_1.ForbiddenException(`Acesso negado: Requer nível ${requiredRoles.join(' ou ')}`);
+        if (module && action) {
+            const userRoleFormatted = String(user.role).toUpperCase();
+            const hasAccess = action === 'modify'
+                ? (0, roles_1.canModifyModule)(userRoleFormatted, module)
+                : (0, roles_1.canViewModule)(userRoleFormatted, module);
+            if (!hasAccess) {
+                throw new common_1.ForbiddenException(`Acesso negado: Seu perfil (${user.role}) não tem permissão de ${action === 'modify' ? 'escrita' : 'leitura'} no módulo [${module}].`);
+            }
+            return true;
         }
         return true;
     }
