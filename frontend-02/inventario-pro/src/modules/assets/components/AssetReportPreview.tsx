@@ -9,13 +9,27 @@ interface ReportPreviewProps {
   onBack: () => void;
 }
 
-// Lista mestre com a grafia exata do Banco de Dados para validação de existência
 const MASTER_TYPES = ['DESKTOP', 'LAPTOP', 'MONITOR', 'STORAGE', 'ROTEADOR', 'SERVIDOR_FISICO', 'SERVIDOR_VIRTUAL', 'SWITCH'];
 const MASTER_STATUS = ['DISPONIVEL', 'EM_USO', 'MANUTENCAO', 'DESCARTADO'];
 
-// Helper para formatar amigavelmente os enums na interface do usuário
+const normalizeType = (typeString: string | undefined): string => {
+  if (!typeString) return '';
+  return typeString
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '_')
+    .replace('(VM)', '')
+    .replace(/[^A-Z0-9_]/g, '')
+    .trim();
+};
+
 const formatLabel = (text: string) => {
   if (!text) return '-';
+  const clean = text.toUpperCase().replace(/_/g, ' ');
+  if (clean.includes('VIRTUAL') || clean.includes('VM')) return 'Servidor Virtual (VM)';
+  if (clean.includes('FISICO')) return 'Servidor Físico';
+  
   return text
     .toUpperCase()
     .replace(/_/g, ' ')
@@ -26,8 +40,6 @@ const formatLabel = (text: string) => {
     .replace('MONITOR', 'Monitor')
     .replace('STORAGE', 'Storage')
     .replace('ROTEADOR', 'Roteador')
-    .replace('SERVIDOR FISICO', 'Servidor Físico')
-    .replace('SERVIDOR VIRTUAL', 'Servidor Virtual')
     .replace('SWITCH', 'Switch');
 };
 
@@ -35,56 +47,46 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
   const activeFields = AVAILABLE_FIELDS.filter(f => f.key !== 'id' && selectedFields.includes(f.key));
   const suggestedName = `relatorio_ativos_${new Date().toISOString().slice(0, 10)}`;
 
-  // Estado dos IDs selecionados individualmente por checkbox
   const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>(
     filteredAssets.map(asset => Number(asset.id))
   );
 
-  // Estados dos Dropdowns
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   
-  // Identifica dinamicamente quais itens existem na lista atual do banco, mas valida contra o MASTER
   const uniqueTypesInData = Array.from(
-    new Set(filteredAssets.map(a => a.tipo?.toUpperCase()).filter(Boolean))
-  ).filter(t => MASTER_TYPES.includes(t)) as string[];
+    new Set(filteredAssets.map(a => normalizeType(a.tipo)).filter(Boolean))
+  ).filter(t => MASTER_TYPES.includes(t) || t.includes('SERVIDOR')) as string[];
 
   const uniqueStatusInData = Array.from(
-    new Set(filteredAssets.map(a => a.status?.toUpperCase()).filter(Boolean))
+    new Set(filteredAssets.map(a => a.status?.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')).filter(Boolean))
   ).filter(s => MASTER_STATUS.includes(s)) as string[];
 
-  // Filtros ativos (inicializados com o que de fato existe nos dados)
   const [typeFilters, setTypeFilters] = useState<string[]>(uniqueTypesInData);
   const [statusFilters, setStatusFilters] = useState<string[]>(uniqueStatusInData);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sincroniza os filtros caso a lista externa de ativos mude
   useEffect(() => {
     setTypeFilters(uniqueTypesInData);
     setStatusFilters(uniqueStatusInData);
   }, [filteredAssets]);
 
-  // Fecha o dropdown se clicar fora ou scrollar a janela (mas ignora scroll interno)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setActiveDropdown(null);
       }
     }
-    
     function handleScrollOutside(event: Event) {
-      // CORREÇÃO DA BARRA DE ROLAGEM: Se o scroll veio de dentro do menu, não fecha!
       if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
         return;
       }
       setActiveDropdown(null);
     }
-
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', handleScrollOutside, true);
     window.addEventListener('resize', () => setActiveDropdown(null));
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('scroll', handleScrollOutside, true);
@@ -92,7 +94,6 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
     };
   }, [uniqueTypesInData, uniqueStatusInData]);
 
-  // Posicionamento inteligente do menu flutuante
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>, key: string) => {
     e.stopPropagation();
     if (activeDropdown === key) {
@@ -101,13 +102,10 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
       const rect = e.currentTarget.getBoundingClientRect();
       const dropdownEstimatedHeight = 210; 
       const spaceBelow = window.innerHeight - rect.bottom;
-      
       let topPosition = rect.bottom + window.scrollY + 4;
-      
       if (spaceBelow < dropdownEstimatedHeight && rect.top > dropdownEstimatedHeight) {
         topPosition = rect.top + window.scrollY - dropdownEstimatedHeight - 4;
       }
-
       setDropdownStyle({
         position: 'fixed',
         top: topPosition,
@@ -117,14 +115,67 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
     }
   };
 
-  // Filtragem da tabela com base no que está selecionado nas colunas
   const dataFilteredByColumns = filteredAssets.filter(asset => {
-    const matchesType = !asset.tipo || typeFilters.includes(asset.tipo.toUpperCase());
-    const matchesStatus = !asset.status || statusFilters.includes(asset.status.toUpperCase());
+    const normType = normalizeType(asset.tipo);
+    const normStatus = asset.status?.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
+    const matchesType = !asset.tipo || typeFilters.includes(normType) || typeFilters.some(t => normType.includes(t));
+    const matchesStatus = !asset.status || statusFilters.includes(normStatus);
     return matchesType && matchesStatus;
   });
 
-  const assetsToInclude = dataFilteredByColumns.filter(asset => selectedAssetIds.includes(Number(asset.id)));
+  // 🛠️ MAPEAMENTO MESTRE E FLEXÍVEL DO HOSTNAME PAI (Detecta objetos ou IDs em qualquer padrão)
+  const getParentHostname = (vm: any): string => {
+    // 1. Verifica se existe o objeto completo do pai injetado (Ex: vm.servidorPai.hostname)
+    const parentObj = vm.servidorPai || vm.servidor_pai || vm.host || vm.parent;
+    if (parentObj && parentObj.hostname) {
+      return parentObj.hostname;
+    }
+
+    // 2. Coleta possíveis chaves de ID do pai no modelo de dados
+    const pId = vm.servidorPaiId || vm.servidor_pai_id || vm.hostId || vm.host_id || vm.parentId || vm.parent_id;
+    if (!pId) return '';
+    
+    // 3. Varre a lista completa para achar o Servidor Físico correspondente
+    const parent = filteredAssets.find(a => 
+      a.id?.toString().trim() === pId.toString().trim()
+    );
+    return parent ? (parent.hostname || 'Servidor Desconhecido') : '';
+  };
+
+  // Organiza de forma hierárquica baseada no mapeamento flexível
+  const buildHierarchicalList = (assets: Asset[]): Asset[] => {
+    const physicalServers = assets.filter(a => normalizeType(a.tipo).includes('SERVIDOR_FISICO'));
+    const virtualMachines = assets.filter(a => normalizeType(a.tipo).includes('SERVIDOR_VIRTUAL'));
+    const remainingAssets = assets.filter(a => !normalizeType(a.tipo).includes('SERVIDOR_FISICO') && !normalizeType(a.tipo).includes('SERVIDOR_VIRTUAL'));
+    
+    const orderedList: Asset[] = [];
+
+    physicalServers.forEach(server => {
+      orderedList.push(server);
+      
+      // Vincula a VM ao Servidor Físico comparando os IDs ou o hostname do objeto pai detectado
+      const childrenVm = virtualMachines.filter((vm: any) => {
+        const pObj = vm.servidorPai || vm.servidor_pai || vm.host || vm.parent;
+        if (pObj && pObj.id) {
+          return pObj.id.toString().trim() === server.id?.toString().trim();
+        }
+        
+        const pId = vm.servidorPaiId || vm.servidor_pai_id || vm.hostId || vm.host_id || vm.parentId || vm.parent_id;
+        return pId && pId.toString().trim() === server.id?.toString().trim();
+      });
+      
+      orderedList.push(...childrenVm);
+    });
+
+    const orphanVms = virtualMachines.filter((vm: any) => 
+      !orderedList.some(ordered => ordered.id?.toString().trim() === vm.id?.toString().trim())
+    );
+
+    return [...orderedList, ...orphanVms, ...remainingAssets];
+  };
+
+  const finalHierarchicalViewList = buildHierarchicalList(dataFilteredByColumns);
+  const assetsToInclude = finalHierarchicalViewList.filter(asset => selectedAssetIds.includes(Number(asset.id)));
 
   const handleToggleAsset = (id: number) => {
     setSelectedAssetIds(prev =>
@@ -132,15 +183,15 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
     );
   };
 
-  const visibleAndSelected = dataFilteredByColumns.filter(a => selectedAssetIds.includes(Number(a.id)));
-  const allVisibleSelected = visibleAndSelected.length === dataFilteredByColumns.length;
+  const visibleAndSelected = finalHierarchicalViewList.filter(a => selectedAssetIds.includes(Number(a.id)));
+  const allVisibleSelected = visibleAndSelected.length === finalHierarchicalViewList.length;
 
   const handleToggleAllVisible = () => {
     if (allVisibleSelected) {
-      const visibleIds = dataFilteredByColumns.map(a => Number(a.id));
+      const visibleIds = finalHierarchicalViewList.map(a => Number(a.id));
       setSelectedAssetIds(prev => prev.filter(id => !visibleIds.includes(id)));
     } else {
-      const visibleIds = dataFilteredByColumns.map(a => Number(a.id));
+      const visibleIds = finalHierarchicalViewList.map(a => Number(a.id));
       setSelectedAssetIds(prev => Array.from(new Set([...prev, ...visibleIds])));
     }
   };
@@ -162,10 +213,29 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
   const generateHTMLTable = () => {
     const tableHeaders = activeFields.map(f => `<th style="border:1px solid #cbd5e1;padding:10px;background-color:#f8fafc;text-align:left;font-family:sans-serif;font-size:11px;font-weight:bold;color:#1e293b;">${f.label}</th>`).join('');
     const tableRows = assetsToInclude.map((asset: any) => {
-      const cells = activeFields.map(f => {
-        const val = f.key === 'tipo' || f.key === 'status' ? formatLabel(asset[f.key]) : asset[f.key];
-        return `<td style="border:1px solid #e2e8f0;padding:8px;font-family:sans-serif;font-size:11px;color:#334155;word-break:break-word;">${val || '-'}</td>`;
+      const isVm = normalizeType(asset.tipo).includes('SERVIDOR_VIRTUAL');
+      
+      const cells = activeFields.map((f) => {
+        let displayVal = '';
+
+        if (f.key === 'hostname') {
+          if (isVm) {
+            const pHost = getParentHostname(asset);
+            const currentHost = asset.hostname || '-';
+            displayVal = pHost 
+              ? `<span style="color:#475569;font-weight:bold;">${pHost}</span> <span style="color:#0284c7;font-weight:bold;">&gt; ${currentHost}</span>`
+              : `<span style="color:#0284c7;font-weight:bold;">${currentHost}</span>`;
+          } else {
+            displayVal = `<span style="color:#0f172a;font-weight:bold;">${asset.hostname || '-'}</span>`;
+          }
+        } else {
+          const val = f.key === 'tipo' || f.key === 'status' ? formatLabel(asset[f.key]) : asset[f.key];
+          displayVal = String(val || '-');
+        }
+        
+        return `<td style="border:1px solid #e2e8f0;padding:8px;font-family:sans-serif;font-size:11px;color:#334155;word-break:break-word;${isVm ? 'background-color:#f8fafc;' : ''}">${displayVal}</td>`;
       }).join('');
+      
       return `<tr style="page-break-inside:avoid;">${cells}</tr>`;
     }).join('');
 
@@ -184,7 +254,7 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
         </style>
       </head>
       <body>
-        <h2>Relatório de Ativos Físicos</h2>
+        <h2>Relatório de Ativos Físicos e Virtuais</h2>
         <p>Gerado em: ${new Date().toLocaleString()} | Itens Incluídos: ${assetsToInclude.length}</p>
         <table>
           <thead><tr>${tableHeaders}</tr></thead>
@@ -203,12 +273,19 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
 
     if (format === 'csv') {
       const headerRow = activeFields.map(f => `"${f.label}"`).join(';');
-      const dataRows = assetsToInclude.map((asset: any) => 
-        activeFields.map(f => {
-          const val = f.key === 'tipo' || f.key === 'status' ? formatLabel(asset[f.key]) : asset[f.key];
+      const dataRows = assetsToInclude.map((asset: any) => {
+        const isVm = normalizeType(asset.tipo).includes('SERVIDOR_VIRTUAL');
+        return activeFields.map((f) => {
+          let val = '';
+          if (f.key === 'hostname' && isVm) {
+            const pHost = getParentHostname(asset);
+            val = pHost ? `${pHost} > ${asset.hostname || '-'}` : (asset.hostname || '-');
+          } else {
+            val = f.key === 'tipo' || f.key === 'status' ? formatLabel(asset[f.key]) : asset[f.key];
+          }
           return `"${String(val || '-').replace(/"/g, '""')}"`;
-        }).join(';')
-      );
+        }).join(';');
+      });
       const csvContent = 'sep=;\n\uFEFF' + [headerRow, ...dataRows].join('\n');
       downloadBlob(csvContent, `${suggestedName}.csv`, 'text/csv;charset=utf-8;');
     } else if (format === 'html') {
@@ -245,7 +322,7 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white uppercase">Visualização</h1>
             <p className="text-xs text-slate-400">
-              Exportando <span className="text-cyan-400 font-bold">{assetsToInclude.length}</span> ativos selecionados e filtrados.
+              Exportando <span className="text-cyan-400 font-bold">{assetsToInclude.length}</span> ativos selecionados e mapeados hierarquicamente.
             </p>
           </div>
           
@@ -296,15 +373,21 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/60 text-xs text-slate-300">
-                {dataFilteredByColumns.map((asset) => {
+                {finalHierarchicalViewList.map((asset) => {
                   const assetId = Number(asset.id);
                   const isAssetMarked = selectedAssetIds.includes(assetId);
+                  const isVm = normalizeType(asset.tipo).includes('SERVIDOR_VIRTUAL');
+                  const parentHostname = getParentHostname(asset);
 
                   return (
                     <tr 
                       key={assetId} 
                       onClick={() => handleToggleAsset(assetId)}
-                      className={`transition cursor-pointer ${isAssetMarked ? 'hover:bg-[#0c1324]/50' : 'opacity-30 bg-slate-950/10 hover:opacity-50'}`}
+                      className={`transition cursor-pointer ${
+                        isAssetMarked 
+                          ? isVm ? 'bg-sky-950/10 hover:bg-sky-900/20' : 'hover:bg-[#0c1324]/50' 
+                          : 'opacity-30 bg-slate-950/10 hover:opacity-50'
+                      }`}
                     >
                       <td className="px-4 py-3 text-center w-14 select-none">
                         {isAssetMarked ? <CheckSquare size={15} className="text-cyan-400 inline" /> : <Square size={15} className="text-slate-600 inline" />}
@@ -312,14 +395,31 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
                       
                       {activeFields.map((field) => (
                         <td key={field.key} className="px-4 py-3 font-medium truncate max-w-xs">
-                          {field.key === 'tipo' || field.key === 'status' ? formatLabel(asset[field.key]) : String((asset as any)[field.key] || '-')}
+                          {field.key === 'hostname' ? (
+                            isVm ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-500 mr-0.5">↳</span>
+                                <span className="text-white font-semibold">
+                                  {parentHostname || 'Orfã'}
+                                </span>
+                                <span className="text-slate-500 font-normal">&gt;</span>
+                                <span className="text-cyan-400 font-bold">
+                                  {asset.hostname || '-'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-white font-bold">{asset.hostname || '-'}</span>
+                            )
+                          ) : (
+                            field.key === 'tipo' || field.key === 'status' ? formatLabel(asset[field.key]) : String((asset as any)[field.key] || '-')
+                          )}
                         </td>
                       ))}
                     </tr>
                   );
                 })}
 
-                {dataFilteredByColumns.length === 0 && (
+                {finalHierarchicalViewList.length === 0 && (
                   <tr>
                     <td colSpan={activeFields.length + 1} className="text-center py-12 text-slate-500 font-medium">
                       Nenhum ativo corresponde aos filtros selecionados nas colunas.
@@ -332,7 +432,7 @@ export default function AssetReportPreview({ filteredAssets, selectedFields, onB
         </div>
       </div>
 
-      {/* DROPDOWN FLUTUANTE (FIXED) - Apenas mostra as opções SE existirem na listagem */}
+      {/* DROPDOWN FLUTUANTE (FIXED) */}
       {activeDropdown && (
         <div 
           ref={dropdownRef} 
