@@ -1,3 +1,4 @@
+# https://github.com/akmalovaa/zabbix-docker
 services:
   zabbix-server:
     image: ${ZABBIX_SERVER_IMAGE:-zabbix/zabbix-server-pgsql:ubuntu-7.4-latest}
