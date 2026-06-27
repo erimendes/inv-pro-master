@@ -1,0 +1,185 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API modular de alta performance com autenticação \"Regra de Ouro\" (Cookies HttpOnly) e RBAC.",
+        "title": "API de Inventário ProMaster",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/dashboard": {
+            "get": {
+                "description": "Retorna os ativos, racks e sistemas se o usuário possuir o cookie de ADMIN",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Infraestrutura"
+                ],
+                "summary": "Obter dados do painel do Datacenter",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "description": "Valida as credenciais e injeta os Cookies HttpOnly de Sessão e de Role (Regra de Ouro)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Fazer login no sistema",
+                "parameters": [
+                    {
+                        "description": "Credenciais de Login",
+                        "name": "credenciais",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Cria um usuário no banco PostgreSQL com senha criptografada em Bcrypt",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Registrar um novo usuário",
+                "parameters": [
+                    {
+                        "description": "Dados do Usuário",
+                        "name": "usuario",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "auth.Role": {
+            "type": "string",
+            "enum": [
+                "ADMIN",
+                "USER"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleUser"
+            ]
+        },
+        "auth.User": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/auth.Role"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
