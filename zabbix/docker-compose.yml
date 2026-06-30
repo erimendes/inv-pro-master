@@ -1,0 +1,104 @@
+# https://github.com/akmalovaa/zabbix-docker
+services:
+  zabbix-server:
+    image: ${ZABBIX_SERVER_IMAGE:-zabbix/zabbix-server-pgsql:ubuntu-7.4-latest}
+    restart: unless-stopped
+    ports:
+      - "10051:10051"
+    environment:
+      DB_SERVER_HOST: ${DB_SERVER_HOST}      # <-- O Docker vai ler o IP do seu .env
+      DB_SERVER_PORT: ${DB_SERVER_PORT}      # <-- O Docker vai ler a porta 5432 do seu .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    networks:
+      - network-zabbix
+
+  zabbix-frontend:
+    image: ${ZABBIX_FRONTEND_IMAGE:-zabbix/zabbix-web-nginx-pgsql:ubuntu-7.4-latest}
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      DB_SERVER_HOST: ${DB_SERVER_HOST}      # <-- O Docker vai ler o IP do seu .env
+      DB_SERVER_PORT: ${DB_SERVER_PORT}      # <-- O Docker vai ler a porta 5432 do seu .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PHP_TZ: ${TZ}
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
+    depends_on:
+      - zabbix-server
+    networks:
+      - network-zabbix
+
+  zabbix-agent:
+    image: ${ZABBIX_AGENT_IMAGE:-zabbix/zabbix-agent2:ubuntu-7.4-latest}
+    restart: unless-stopped
+    ports:
+      - "10050:10050"
+    environment:
+      ZBX_ACTIVE_ALLOW: false
+      TZ: ${TZ}
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
+      ZBX_HOSTNAME: zabbix-agent
+      ZBX_HOSTNAMEITEM: system.hostname
+    depends_on:
+      - zabbix-server
+    networks:
+      - network-zabbix
+
+  # postgres:
+  #   image: ${POSTGRES_IMAGE:-postgres:latest}
+  #   # command: -c ssl=on -c ssl_cert_file=/run/secrets/server-cert.pem -c ssl_key_file=/run/secrets/server-key.pem -c ssl_ca_file=/run/secrets/root-ca.pem
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres:/var/lib/postgresql/data
+  #     # - pgsql_socket:/var/run/postgresql/
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER-zabbix}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-zabbix}
+  #     POSTGRES_DB: ${POSTGRES_DB-zabbix}
+  #     PGDATA: /var/lib/postgresql/data/pgdata
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER-zabbix}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - network-zabbix
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_SECRET:-12345}
+      GF_INSTALL_PLUGINS: alexanderzobnin-zabbix-app
+      TZ: ${TZ}
+    user: "472"
+    volumes:
+      - grafana:/var/lib/grafana
+    depends_on:
+      - zabbix-frontend
+    networks:
+      - network-zabbix
+
+volumes:
+  # postgres: {}
+  grafana: {}
+
+networks:
+  network-zabbix:
+    external: true
+    name: postgres_default

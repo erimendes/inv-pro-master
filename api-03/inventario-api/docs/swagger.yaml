@@ -1,0 +1,126 @@
+basePath: /api
+definitions:
+  auth.Role:
+    enum:
+    - ADMIN
+    - USER
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleUser
+  auth.User:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/auth.Role'
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API modular de alta performance com autenticação "Regra de Ouro" (Cookies
+    HttpOnly) e RBAC.
+  title: API de Inventário ProMaster
+  version: "1.0"
+paths:
+  /dashboard:
+    get:
+      description: Retorna os ativos, racks e sistemas se o usuário possuir o cookie
+        de ADMIN
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Obter dados do painel do Datacenter
+      tags:
+      - Infraestrutura
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Valida as credenciais e injeta os Cookies HttpOnly de Sessão e
+        de Role (Regra de Ouro)
+      parameters:
+      - description: Credenciais de Login
+        in: body
+        name: credenciais
+        required: true
+        schema:
+          $ref: '#/definitions/auth.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Fazer login no sistema
+      tags:
+      - Autenticação
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Cria um usuário no banco PostgreSQL com senha criptografada em
+        Bcrypt
+      parameters:
+      - description: Dados do Usuário
+        in: body
+        name: usuario
+        required: true
+        schema:
+          $ref: '#/definitions/auth.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registrar um novo usuário
+      tags:
+      - Autenticação
+swagger: "2.0"

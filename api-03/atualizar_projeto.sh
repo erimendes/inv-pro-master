@@ -1,0 +1,295 @@
+#!/bin/bash
+
+echo "🚀 Iniciando a criação/atualização do projeto Go com suas credenciais reais..."
+
+# 1. Criação das pastas da estrutura modular
+mkdir -p inventario-api/internal/database
+mkdir -p inventario-api/internal/auth
+mkdir -p inventario-api/internal/infra
+
+cd inventario-api
+
+# 2. Inicialização do módulo Go
+if [ ! -f "go.mod" ]; then
+    go mod init inventario-api
+fi
+
+# 3. Criando o módulo DATABASE (Com seus dados REAIS do Postgres)
+echo "📦 Criando internal/database/postgres.go com credenciais corretas..."
+cat << 'EOF' > internal/database/postgres.go
+package database
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Pool global de conexões
+var DB *pgxpool.Pool
+
+func Conectar() {
+	ctx := context.Background()
+	
+	// Configurado exatamente com as suas credenciais de ambiente!
+	connStr := "postgres://postgres:postgres@localhost:5432/minha_api_02?sslmode=disable"
+
+	var err error
+	// pgxpool gerencia múltiplas conexões concorrentes sozinho
+	DB, err = pgxpool.New(ctx, connStr)
+	if err != nil {
+		log.Fatalf("Não foi possível criar o pool de conexões: %v", err)
+	}
+
+	if err := DB.Ping(ctx); err != nil {
+		log.Fatalf("Banco de dados inacessível: %v", err)
+	}
+
+	fmt.Println("Conectado ao PostgreSQL com pgx com sucesso!")
+	criarTabelas(ctx)
+}
+
+func criarTabelas(ctx context.Context) {
+	schema := `
+	CREATE TABLE IF NOT EXISTS usuarios (
+		id SERIAL PRIMARY KEY,
+		username VARCHAR(50) UNIQUE NOT NULL,
+		password TEXT NOT NULL,
+		role VARCHAR(20) NOT NULL
+	);`
+
+	_, err := DB.Exec(ctx, schema)
+	if err != nil {
+		log.Fatalf("Erro ao criar tabelas: %v", err)
+	}
+}
+EOF
+
+# 4. Criando os arquivos do módulo AUTH
+echo "🔐 Criando internal/auth/model.go..."
+cat << 'EOF' > internal/auth/model.go
+package auth
+
+import "golang.org/x/crypto/bcrypt"
+
+type Role string
+
+const (
+	RoleAdmin Role = "ADMIN"
+	RoleUser  Role = "USER"
+)
+
+type User struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     Role   `json:"role"`
+}
+
+func (u *User) HashPassword() error {
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedBytes)
+	return nil
+}
+
+func (u *User) CheckPassword(providedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(providedPassword))
+	return err == nil
+}
+EOF
+
+echo "🗄️ Criando internal/auth/repository.go..."
+cat << 'EOF' > internal/auth/repository.go
+package auth
+
+import (
+	"context"
+	"inventario-api/internal/database"
+)
+
+func CriarUsuario(u User) error {
+	query := `INSERT INTO usuarios (username, password, role) VALUES ($1, $2, $3)`
+	_, err := database.DB.Exec(context.Background(), query, u.Username, u.Password, u.Role)
+	return err
+}
+
+func BuscarPorUsername(username string) (User, error) {
+	query := `SELECT id, username, password, role FROM usuarios WHERE username = $1`
+	var u User
+	err := database.DB.QueryRow(context.Background(), query, username).Scan(&u.ID, &u.Username, &u.Password, &u.Role)
+	return u, err
+}
+EOF
+
+echo "🧠 Criando internal/auth/service.go..."
+cat << 'EOF' > internal/auth/service.go
+package auth
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
+)
+
+func ServiceRegistrar(u User) error {
+	if u.Role != RoleAdmin && u.Role != RoleUser {
+		u.Role = RoleUser
+	}
+	
+	if err := u.HashPassword(); err != nil {
+		return err
+	}
+	
+	return CriarUsuario(u)
+}
+
+func ServiceLogin(credentials User) (string, Role, error) {
+	usuarioSalvo, err := BuscarPorUsername(credentials.Username)
+	if err != nil || !usuarioSalvo.CheckPassword(credentials.Password) {
+		return "", "", errors.New("credenciais inválidas")
+	}
+
+	b := make([]byte, 32)
+	rand.Read(b)
+	token := base64.URLEncoding.EncodeToString(b)
+
+	return token, usuarioSalvo.Role, nil
+}
+EOF
+
+echo "🚦 Criando internal/auth/handler.go..."
+cat << 'EOF' > internal/auth/handler.go
+package auth
+
+import (
+	"time"
+	"github.com/gofiber/fiber/v2"
+)
+
+func RegisterHandler(c *fiber.Ctx) error {
+	var user User
+	if err := c.BodyParser(&user); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "JSON inválido"})
+	}
+
+	if err := ServiceRegistrar(user); err != nil {
+		return c.Status(409).JSON(fiber.Map{"error": "Usuário já existe"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{"message": "Registrado com sucesso"})
+}
+
+func LoginHandler(c *fiber.Ctx) error {
+	var user User
+	if err := c.BodyParser(&user); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Requisição inválida"})
+	}
+
+	token, role, err := ServiceLogin(user)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// REGRA DE OURO MODERNA: Cookies HttpOnly seguros
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_token",
+		Value:    token,
+		Expires:  time.Now().Add(8 * time.Hour),
+		HTTPOnly: true,
+		Secure:   false, 
+		SameSite: "Lax",
+	})
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "user_role",
+		Value:    string(role),
+		Expires:  time.Now().Add(8 * time.Hour),
+		HTTPOnly: false, 
+		SameSite: "Lax",
+	})
+
+	return c.JSON(fiber.Map{"message": "Logado com sucesso"})
+}
+EOF
+
+# 5. Criando os arquivos do módulo INFRA
+echo "🖥️ Criando internal/infra/handler.go..."
+cat << 'EOF' > internal/infra/handler.go
+package infra
+
+import "github.com/gofiber/fiber/v2"
+
+func DashboardHandler(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
+		"infraestrutura_ativos": 18,
+		"sistemas_apps":          12,
+		"datacenter_racks":       14,
+		"acessos_users":          0,
+	})
+}
+EOF
+
+# 6. Criando o arquivo principal MAIN.GO
+echo "🏁 Criando main.go..."
+cat << 'EOF' > main.go
+package main
+
+import (
+	"log"
+	
+	"inventario-api/internal/auth"
+	"inventario-api/internal/database"
+	"inventario-api/internal/infra"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+)
+
+func RequererRole(roleNecessaria string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		token := c.Cookies("session_token")
+		role := c.Cookies("user_role")
+
+		if token == "" {
+			return c.Status(401).JSON(fiber.Map{"error": "Não autenticado"})
+		}
+
+		if role != roleNecessaria {
+			return c.Status(403).JSON(fiber.Map{"error": "Acesso proibido para seu nível"})
+		}
+
+		return c.Next()
+	}
+}
+
+func main() {
+	database.Conectar()
+
+	app := fiber.New()
+	app.Use(logger.New())
+
+	app.Post("/api/register", auth.RegisterHandler)
+	app.Post("/api/login", auth.LoginHandler)
+	app.Get("/api/dashboard", RequererRole("ADMIN"), infra.DashboardHandler)
+
+	log.Fatal(app.Listen(":8080"))
+}
+EOF
+
+# 7. Baixando e limpando dependências
+echo "⚡ Instalando e organizando pacotes do Go..."
+go get github.com/gofiber/fiber/v2
+go get github.com/jackc/pgx/v5
+go get golang.org/x/crypto/bcrypt
+go mod tidy
+
+echo "--------------------------------------------------------"
+echo "🎉 Script concluído com sucesso!"
+echo "🚀 Para iniciar seu servidor agora execute:"
+echo "   go run main.go"
+echo "--------------------------------------------------------"
