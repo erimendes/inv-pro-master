@@ -109,9 +109,9 @@ def buscar_topologia_rede(client):
 
 def main():
     # --- Configurações de Conexão do seu Zabbix ---
-    ZABBIX_URL = "http://ip/zabbix" # Altere para sua URL real
+    ZABBIX_URL = "http://130.1.0.225/zabbix" # Altere para sua URL real
     USERNAME = "Admin"                     # Seu Usuário
-    PASSWORD = ""                     # Sua Senha
+    PASSWORD = "sptrans"                     # Sua Senha
     OUTPUT_CSV = "topologia_switches.csv"
     
     try:

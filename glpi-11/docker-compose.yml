@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  glpi:
+    image: "glpi/glpi:latest"
+    restart: "unless-stopped"
+    volumes:
+      # Mapeando direto para a pasta local que você deseja
+      - "./storage/glpi:/var/glpi"
+      # Se for usar o marketplace no futuro, descomente a linha abaixo:
+      # - "./storage/glpi_marketplace:/var/www/glpi/marketplace/"
+    env_file: .env
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+
+  db:
+    image: "mysql"
+    restart: "unless-stopped"
+    volumes:
+      # Mapeando direto para a pasta local do banco
+      - "./storage/mysql:/var/lib/mysql"
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: ${GLPI_DB_NAME}
+      MYSQL_USER: ${GLPI_DB_USER}
+      MYSQL_PASSWORD: ${GLPI_DB_PASSWORD}
+
+# Removemos a seção 'volumes:' do final porque as pastas locais já foram 
+# declaradas diretamente nos serviços acima.
